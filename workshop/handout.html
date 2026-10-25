@@ -235,6 +235,20 @@
     body { padding-top: 0; }
     .content { max-width: none; padding: 0; }
   }
+
+  [hidden] { display: none !important; }
+  html { scroll-behavior: auto; }
+  body { overflow-x: hidden; }
+  .content { position: relative; }
+  .ws-section { border-bottom: 0; min-height: 65vh; }
+  .ws-section.slide-in { animation: enter-slide .32s ease-out; }
+  @keyframes enter-slide { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  .slide-nav { display: flex; align-items: center; justify-content: space-between; gap: .75rem; border-top: 1px solid var(--rule); padding: 1rem 0; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg-alt); padding: 1rem; border-radius: 6px; }
+  select { max-width: 100%; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+  @media (prefers-reduced-motion: reduce) { .ws-section.slide-in { animation: none; } }
+  @media print { .ws-section[hidden] { display: block !important; } .slide-nav { display: none; } }
 </style>
 </head>
 <body>
@@ -282,16 +296,7 @@
         </div>
       </div>
 
-      <div class="field" data-type="radio">
-        <span class="field-label">Where are you coming into this from?</span>
-        <p class="field-hint">This just decides which "help" and "stretch" boxes open by default through the handout — everything stays clickable either way, so change it any time.</p>
-        <div class="options inline">
-          <label class="pill"><input type="radio" name="experience-level" value="new"> New to AI coding agents</label>
-          <label class="pill"><input type="radio" name="experience-level" value="tried"> Tried Copilot/Cursor/Claude a bit</label>
-          <label class="pill"><input type="radio" name="experience-level" value="daily"> Use an agent most days</label>
-          <label class="pill"><input type="radio" name="experience-level" value="power"> I build on agents/skills/tools professionally</label>
-        </div>
-      </div>
+<div class="field" data-type="radio"><span class="field-label">Which operating system are you using?</span><div class="options inline"><label class="pill"><input type="radio" name="participant-os" value="windows"> Windows</label><label class="pill"><input type="radio" name="participant-os" value="mac"> Mac</label></div></div><div class="field" data-type="radio"><span class="field-label">Which tool are you using?</span><div class="options inline"><label class="pill"><input type="radio" name="participant-tool" value="desktop"> Claude Desktop</label><label class="pill"><input type="radio" name="participant-tool" value="claude"> Claude Code</label><label class="pill"><input type="radio" name="participant-tool" value="codex"> Codex</label><label class="pill"><input type="radio" name="participant-tool" value="other"> Other</label></div></div><div class="field" data-type="radio"><span class="field-label">How comfortable are you with the command line?</span><div class="options inline"><label class="pill"><input type="radio" name="terminal-level" value="new"> What's a command line?</label><label class="pill"><input type="radio" name="terminal-level" value="beginner"> Beginner</label><label class="pill"><input type="radio" name="terminal-level" value="intermediate"> Intermediate</label><label class="pill"><input type="radio" name="terminal-level" value="advanced"> Advanced</label></div></div><p id="profileAdvice" role="status"></p>
     </section>
 
     <!-- ===================== 1. WARM-UP ===================== -->
@@ -300,54 +305,16 @@
         <div class="headline"><span class="eyebrow">Step 1</span><h2>Warm-up</h2></div>
         <span class="time-chip">~10 min</span>
       </div>
-      <p class="lede">The facilitator will poll the room live — jot your own honest answers here first. You'll revisit this exact spot at the end, so there's no wrong answer, just a baseline.</p>
-
-      <div class="field" data-type="radio">
-        <span class="field-label">Which best describes your day-to-day with AI coding agents?</span>
-        <div class="options">
-          <label class="pill"><input type="radio" name="poll-agent-usage" value="Haven't really tried an agent specifically"> Haven't really tried an agent specifically</label>
-          <label class="pill"><input type="radio" name="poll-agent-usage" value="Occasionally, for small things"> Occasionally, for small things</label>
-          <label class="pill"><input type="radio" name="poll-agent-usage" value="Day-to-day already"> Day-to-day already</label>
-          <label class="pill"><input type="radio" name="poll-agent-usage" value="Depends heavily on the tool"> Depends heavily on the tool</label>
-        </div>
-      </div>
-
-      <div class="field" data-type="radio">
-        <span class="field-label">How comfortable are you delegating multi-step work to an agent vs. reviewing every suggestion?</span>
-        <div class="options">
-          <label class="pill"><input type="radio" name="poll-delegation" value="I review every line"> I review every line</label>
-          <label class="pill"><input type="radio" name="poll-delegation" value="I review the diff, not every token"> I review the diff, not every token</label>
-          <label class="pill"><input type="radio" name="poll-delegation" value="I let it run and check the result"> I let it run and check the result</label>
-          <label class="pill"><input type="radio" name="poll-delegation" value="Honestly not sure yet"> Honestly not sure yet</label>
-        </div>
-      </div>
-
-      <div class="field" data-type="checkbox-group">
-        <span class="field-label">What worries you most about agentic coding? (pick any)</span>
-        <div class="options">
-          <label><input type="checkbox" name="concern-correctness"> Correctness / hallucination</label>
-          <label><input type="checkbox" name="concern-scope"> Losing control of scope</label>
-          <label><input type="checkbox" name="concern-understanding"> Not understanding the result well enough to own it</label>
-          <label><input type="checkbox" name="concern-cost"> Cost / token usage</label>
-          <label><input type="checkbox" name="concern-none"> Honestly, not much</label>
-          <label><input type="checkbox" name="concern-other"> Something else (see notes below)</label>
-        </div>
-      </div>
-
-      <div class="field" data-type="textarea">
-        <label class="field-label" for="warmup-notes">Anything else on your mind before we start?</label>
-        <textarea id="warmup-notes" name="warmup-notes" placeholder="Optional — a question, a worry, something you want this session to answer..."></textarea>
-      </div>
-
-      <details class="help help-beginner">
-        <summary>🧭 New to agents? Start here</summary>
-        <div class="help-body">In one sentence: an <strong>agent</strong> is a model that can take multiple actions in a loop toward a goal — reading files, running commands, editing code, checking its own output — instead of just replying once to a single prompt. Everything today builds on that loop; skills are just structured ways of guiding it.</div>
-      </details>
-      <details class="help help-advanced">
-        <summary>🚀 Already deep in this? Try this</summary>
-        <div class="help-body">You likely already have your own prompting habits, custom instructions, or guardrails. Use the margin today to note where Matt Pocock's skills <em>agree</em> with your setup and where they genuinely differ — that comparison is more valuable to you than the basics.</div>
-      </details>
-    </section>
+<p class="lede">Jot down 1–2 sentences on what you think each term means. If you are not sure, guess — we will figure it out together.</p><div class="field" data-type="textarea"><label class="field-label" for="warmup-term-0">AI</label><textarea id="warmup-term-0" name="warmup-term-0" placeholder="One or two sentences — a guess is welcome."></textarea></div>
+<div class="field" data-type="textarea"><label class="field-label" for="warmup-term-1">LLM</label><textarea id="warmup-term-1" name="warmup-term-1" placeholder="One or two sentences — a guess is welcome."></textarea></div>
+<div class="field" data-type="textarea"><label class="field-label" for="warmup-term-2">Token</label><textarea id="warmup-term-2" name="warmup-term-2" placeholder="One or two sentences — a guess is welcome."></textarea></div>
+<div class="field" data-type="textarea"><label class="field-label" for="warmup-term-3">Agent</label><textarea id="warmup-term-3" name="warmup-term-3" placeholder="One or two sentences — a guess is welcome."></textarea></div>
+<div class="field" data-type="textarea"><label class="field-label" for="warmup-term-4">Harness</label><textarea id="warmup-term-4" name="warmup-term-4" placeholder="One or two sentences — a guess is welcome."></textarea></div>
+<div class="field" data-type="textarea"><label class="field-label" for="warmup-term-5">Markdown</label><textarea id="warmup-term-5" name="warmup-term-5" placeholder="One or two sentences — a guess is welcome."></textarea></div>
+<div class="field" data-type="textarea"><label class="field-label" for="warmup-term-6">Shell</label><textarea id="warmup-term-6" name="warmup-term-6" placeholder="One or two sentences — a guess is welcome."></textarea></div>
+<div class="field" data-type="textarea"><label class="field-label" for="warmup-term-7">TUI</label><textarea id="warmup-term-7" name="warmup-term-7" placeholder="One or two sentences — a guess is welcome."></textarea></div>
+<div class="field" data-type="textarea"><label class="field-label" for="warmup-term-8">Skill</label><textarea id="warmup-term-8" name="warmup-term-8" placeholder="One or two sentences — a guess is welcome."></textarea></div>
+<div class="field" data-type="textarea"><label class="field-label" for="warmup-term-9">Context Windows</label><textarea id="warmup-term-9" name="warmup-term-9" placeholder="One or two sentences — a guess is welcome."></textarea></div>    </section>
 
     <!-- ===================== 2. SCENARIO ===================== -->
     <section class="ws-section" id="scenario" data-short="2. The scenario" data-time="~15 min">
@@ -357,13 +324,11 @@
       </div>
       <p class="lede">A client runs a decade-old C# online store. They're commercial people, not engineers — but they vibe-coded a modern Python rewrite using tools like this. It mostly works. It's also pretty buggy. They won't rewrite from scratch (the custom styling is real investment) — they've brought "us" in to fix it and set up a better workflow.</p>
 
-      <div class="grid cols-2">
-        <div class="card"><h3>🟢 It mostly works</h3><p>Catalog, basket, checkout, and orders all function — the styling investment is real and worth keeping.</p></div>
-        <div class="card"><h3>🔴 But it's buggy</h3><p>No rewrite. Fix what's broken, and set up guardrails for next time.</p></div>
-      </div>
+<p class="reference"><strong>It mostly works, but it is buggy.</strong> Keep the styling and working shopping flow; fix the defects and improve the workflow.</p>
 
-      <p>Get the app running locally (see <code>python-eshop/README.md</code> for the full quick start) and click through the shopping flow before the retro discussion.</p>
+      <p>Get the app running locally (see <a href="../python-eshop/README.md">python-eshop/README.md</a> for the full quick start) and click through the shopping flow before the retro discussion.</p>
 
+<details class="help"><summary>Detailed walkthrough setup — for your operating system</summary><div class="help-body" id="appSetup"></div></details>
       <div class="field checklist" data-type="checkbox-group">
         <span class="field-label">Walkthrough checklist</span>
         <div class="options">
@@ -397,7 +362,7 @@
         Before any tooling is introduced — why does vibe-coded software end up like this, and how would <em>you</em> have approached it differently?
       </div>
 
-      <p class="lede">The facilitator will open the floor. This discussion is what makes the skills pitch land next, so give it a real go before scrolling on.</p>
+      <p class="lede">The facilitator will open the floor. This discussion is what makes the skills pitch land next, so give it a real go before moving to the next slide.</p>
 
       <div class="field" data-type="checkbox-group">
         <span class="field-label">Tick any failure modes you suspect played a role</span>
@@ -442,24 +407,13 @@
         <div class="card"><h3><span class="tag alt">Gaps</span></h3><p>Doesn't replace judgement about scope — a skill is only as good as the person (or model) choosing when to invoke it.</p></div>
       </div>
 
-      <div class="quiz">
-        <p class="quiz-q">Quick check: "Skills run automatically whenever the model thinks they're relevant, without you asking."</p>
-        <div class="quiz-actions">
-          <button type="button" class="quiz-btn" data-correct="false">True</button>
-          <button type="button" class="quiz-btn" data-correct="true">False</button>
-        </div>
-        <p class="quiz-feedback" hidden>False — skills run manually. You invoke them, or you explicitly ask the model to use one. They never silently trigger in the background; that's part of what keeps them legible.</p>
-      </div>
-
-      <div class="quiz">
-        <p class="quiz-q">Quick check: "Grill with Docs is a nice-to-have, mostly for advanced users."</p>
-        <div class="quiz-actions">
-          <button type="button" class="quiz-btn" data-correct="false">True</button>
-          <button type="button" class="quiz-btn" data-correct="true">False</button>
-        </div>
-        <p class="quiz-feedback" hidden>False — it's recommended for everyone today, regardless of experience. It forces you to actually understand the codebase before touching it, and you leave with a real artifact (an ADR, a glossary) rather than just a demo.</p>
-      </div>
-
+<div class="quiz"><p class="quiz-q">Quick check 1: Do skills run automatically when relevant?</p><div class="quiz-actions"><button type="button" class="quiz-btn" data-correct="false">Always</button><button type="button" class="quiz-btn" data-correct="false">Never</button><button type="button" class="quiz-btn" data-correct="true">It depends</button></div><div class="quiz-feedback" hidden><p>It depends on the harness and skill settings. Most of Matt Pocock's skills require explicit invocation; others can be chosen by the model.</p><details id="invocationExample"><summary>Inspect Matt Pocock's Triage YAML</summary><p>From <a href="https://github.com/mattpocock/skills/blob/main/skills/engineering/triage/SKILL.md">Triage's SKILL.md</a> (excerpt):</p><pre>---
+name: triage
+disable-model-invocation: true
+---</pre><p>The matching <a href="https://github.com/mattpocock/skills/blob/main/skills/engineering/triage/agents/openai.yaml">Codex configuration</a>:</p><pre>policy:
+  allow_implicit_invocation: false</pre><p>Both settings require you to invoke Triage yourself. Check each skill rather than assuming the whole collection behaves the same way.</p></details></div></div>
+<div class="field" data-type="checkbox-single"><label><input type="checkbox" name="inspect-invocation" id="inspectInvocation"> Expand the YAML and check how invocation is controlled</label></div>
+<div class="quiz"><p class="quiz-q">Quick check 2: Skills load all the information from links at once, making them more useful.</p><div class="quiz-actions"><button type="button" class="quiz-btn" data-correct="false">True</button><button type="button" class="quiz-btn" data-correct="true">False</button></div><p class="quiz-feedback" hidden>False. Skills use progressive loading: metadata first, instructions when invoked, and linked references as needed. This gives you better control of the context window.</p></div>
       <div class="field" data-type="textarea">
         <label class="field-label" for="skills-forward-look">Where do you think "Grill with Docs" will matter most for the bug you'll pick later?</label>
         <p class="field-hint">A forward-looking guess — you'll come back and check yourself against this in Step 2.</p>
@@ -519,19 +473,15 @@
       </div>
 
       <div class="field" data-type="textarea">
-        <label class="field-label" for="skill-install-notes">Open the TOML/YAML header of one chosen skill with your neighbour. What's actually declared there, and what did installing it do / where did the files land?</label>
+        <label class="field-label" for="skill-install-notes">Open the YAML frontmatter of one chosen skill with your neighbour. What's actually declared there, and what did installing it do / where did the files land?</label>
         <textarea id="skill-install-notes" name="skill-install-notes"></textarea>
       </div>
 
       <details class="help help-beginner">
-        <summary>🧭 New to this? What's a "TOML header" and why does it matter</summary>
-        <div class="help-body">Most of these skills store their metadata (name, description, when to use it) in a small header block at the top of the file, written in TOML or YAML — think of it like the label on a filing folder. The model reads <em>just the header</em> first to decide whether a skill is relevant. Only once it's actually invoked does the full body (the real instructions) get loaded. That's "progressive loading" — it keeps the model's context window from being clogged with instructions for skills it isn't using.</div>
+        <summary>🧭 New to this? What's "YAML frontmatter" and why does it matter</summary>
+        <div class="help-body">Most of these skills store their metadata (name, description, when to use it) in a small header block at the top of the file, written in YAML — think of it like the label on a filing folder. The model reads <em>just the header</em> first to decide whether a skill is relevant. Only once it's actually invoked does the full body (the real instructions) get loaded. That's "progressive loading" — it keeps the model's context window from being clogged with instructions for skills it isn't using.</div>
       </details>
-      <details class="help help-advanced">
-        <summary>🚀 Stretch: push on this</summary>
-        <div class="help-body">Diff the header against the full skill body — roughly how much context does deferring the full body actually save? Could you sketch a one-paragraph header for a skill of your own, tight enough that a model could decide "relevant / not relevant" from it alone?</div>
-      </details>
-    </section>
+<div id="selectedSkillGuidance" class="reference"></div><details class="help help-advanced"><summary>🚀 Stretch: read the skills, then rate them against your expectations</summary><div class="help-body"><p>Open the Markdown in at least one chosen skill's SKILL.md. Review the instructions and follow a reference link. Rate each skill you inspect on these four scales; leave unread skills blank.</p><div data-review-skill="ask-matt"><h4>Ask Matt</h4><div class="field" data-type="textarea"><label class="field-label" for="review-ask-matt">What did you expect, and what did the Markdown actually say?</label><textarea id="review-ask-matt" name="review-ask-matt" placeholder="One or two sentences — a guess is welcome."></textarea></div><div class="field" data-type="select"><label class="field-label" for="scale-ask-matt-0">Ask Matt: Explicit ↔ Implicit</label><select id="scale-ask-matt-0" name="scale-ask-matt-0"><option value="">Rate after reading</option><option>Explicit</option><option>Mostly Explicit</option><option>In between</option><option>Mostly Implicit</option><option>Implicit</option></select></div><div class="field" data-type="select"><label class="field-label" for="scale-ask-matt-1">Ask Matt: Detailed ↔ Concise</label><select id="scale-ask-matt-1" name="scale-ask-matt-1"><option value="">Rate after reading</option><option>Detailed</option><option>Mostly Detailed</option><option>In between</option><option>Mostly Concise</option><option>Concise</option></select></div><div class="field" data-type="select"><label class="field-label" for="scale-ask-matt-2">Ask Matt: Structured ↔ Loose</label><select id="scale-ask-matt-2" name="scale-ask-matt-2"><option value="">Rate after reading</option><option>Structured</option><option>Mostly Structured</option><option>In between</option><option>Mostly Loose</option><option>Loose</option></select></div><div class="field" data-type="select"><label class="field-label" for="scale-ask-matt-3">Ask Matt: Self contained ↔ Cross referenced</label><select id="scale-ask-matt-3" name="scale-ask-matt-3"><option value="">Rate after reading</option><option>Self contained</option><option>Mostly Self contained</option><option>In between</option><option>Mostly Cross referenced</option><option>Cross referenced</option></select></div></div><div data-review-skill="grill-with-docs"><h4>Grill with Docs</h4><div class="field" data-type="textarea"><label class="field-label" for="review-grill-with-docs">What did you expect, and what did the Markdown actually say?</label><textarea id="review-grill-with-docs" name="review-grill-with-docs" placeholder="One or two sentences — a guess is welcome."></textarea></div><div class="field" data-type="select"><label class="field-label" for="scale-grill-with-docs-0">Grill with Docs: Explicit ↔ Implicit</label><select id="scale-grill-with-docs-0" name="scale-grill-with-docs-0"><option value="">Rate after reading</option><option>Explicit</option><option>Mostly Explicit</option><option>In between</option><option>Mostly Implicit</option><option>Implicit</option></select></div><div class="field" data-type="select"><label class="field-label" for="scale-grill-with-docs-1">Grill with Docs: Detailed ↔ Concise</label><select id="scale-grill-with-docs-1" name="scale-grill-with-docs-1"><option value="">Rate after reading</option><option>Detailed</option><option>Mostly Detailed</option><option>In between</option><option>Mostly Concise</option><option>Concise</option></select></div><div class="field" data-type="select"><label class="field-label" for="scale-grill-with-docs-2">Grill with Docs: Structured ↔ Loose</label><select id="scale-grill-with-docs-2" name="scale-grill-with-docs-2"><option value="">Rate after reading</option><option>Structured</option><option>Mostly Structured</option><option>In between</option><option>Mostly Loose</option><option>Loose</option></select></div><div class="field" data-type="select"><label class="field-label" for="scale-grill-with-docs-3">Grill with Docs: Self contained ↔ Cross referenced</label><select id="scale-grill-with-docs-3" name="scale-grill-with-docs-3"><option value="">Rate after reading</option><option>Self contained</option><option>Mostly Self contained</option><option>In between</option><option>Mostly Cross referenced</option><option>Cross referenced</option></select></div></div><div data-review-skill="triage"><h4>Triage</h4><div class="field" data-type="textarea"><label class="field-label" for="review-triage">What did you expect, and what did the Markdown actually say?</label><textarea id="review-triage" name="review-triage" placeholder="One or two sentences — a guess is welcome."></textarea></div><div class="field" data-type="select"><label class="field-label" for="scale-triage-0">Triage: Explicit ↔ Implicit</label><select id="scale-triage-0" name="scale-triage-0"><option value="">Rate after reading</option><option>Explicit</option><option>Mostly Explicit</option><option>In between</option><option>Mostly Implicit</option><option>Implicit</option></select></div><div class="field" data-type="select"><label class="field-label" for="scale-triage-1">Triage: Detailed ↔ Concise</label><select id="scale-triage-1" name="scale-triage-1"><option value="">Rate after reading</option><option>Detailed</option><option>Mostly Detailed</option><option>In between</option><option>Mostly Concise</option><option>Concise</option></select></div><div class="field" data-type="select"><label class="field-label" for="scale-triage-2">Triage: Structured ↔ Loose</label><select id="scale-triage-2" name="scale-triage-2"><option value="">Rate after reading</option><option>Structured</option><option>Mostly Structured</option><option>In between</option><option>Mostly Loose</option><option>Loose</option></select></div><div class="field" data-type="select"><label class="field-label" for="scale-triage-3">Triage: Self contained ↔ Cross referenced</label><select id="scale-triage-3" name="scale-triage-3"><option value="">Rate after reading</option><option>Self contained</option><option>Mostly Self contained</option><option>In between</option><option>Mostly Cross referenced</option><option>Cross referenced</option></select></div></div><div data-review-skill="wayfinder"><h4>Wayfinder</h4><div class="field" data-type="textarea"><label class="field-label" for="review-wayfinder">What did you expect, and what did the Markdown actually say?</label><textarea id="review-wayfinder" name="review-wayfinder" placeholder="One or two sentences — a guess is welcome."></textarea></div><div class="field" data-type="select"><label class="field-label" for="scale-wayfinder-0">Wayfinder: Explicit ↔ Implicit</label><select id="scale-wayfinder-0" name="scale-wayfinder-0"><option value="">Rate after reading</option><option>Explicit</option><option>Mostly Explicit</option><option>In between</option><option>Mostly Implicit</option><option>Implicit</option></select></div><div class="field" data-type="select"><label class="field-label" for="scale-wayfinder-1">Wayfinder: Detailed ↔ Concise</label><select id="scale-wayfinder-1" name="scale-wayfinder-1"><option value="">Rate after reading</option><option>Detailed</option><option>Mostly Detailed</option><option>In between</option><option>Mostly Concise</option><option>Concise</option></select></div><div class="field" data-type="select"><label class="field-label" for="scale-wayfinder-2">Wayfinder: Structured ↔ Loose</label><select id="scale-wayfinder-2" name="scale-wayfinder-2"><option value="">Rate after reading</option><option>Structured</option><option>Mostly Structured</option><option>In between</option><option>Mostly Loose</option><option>Loose</option></select></div><div class="field" data-type="select"><label class="field-label" for="scale-wayfinder-3">Wayfinder: Self contained ↔ Cross referenced</label><select id="scale-wayfinder-3" name="scale-wayfinder-3"><option value="">Rate after reading</option><option>Self contained</option><option>Mostly Self contained</option><option>In between</option><option>Mostly Cross referenced</option><option>Cross referenced</option></select></div></div><div data-review-skill="codereview"><h4>Code Review</h4><div class="field" data-type="textarea"><label class="field-label" for="review-codereview">What did you expect, and what did the Markdown actually say?</label><textarea id="review-codereview" name="review-codereview" placeholder="One or two sentences — a guess is welcome."></textarea></div><div class="field" data-type="select"><label class="field-label" for="scale-codereview-0">Code Review: Explicit ↔ Implicit</label><select id="scale-codereview-0" name="scale-codereview-0"><option value="">Rate after reading</option><option>Explicit</option><option>Mostly Explicit</option><option>In between</option><option>Mostly Implicit</option><option>Implicit</option></select></div><div class="field" data-type="select"><label class="field-label" for="scale-codereview-1">Code Review: Detailed ↔ Concise</label><select id="scale-codereview-1" name="scale-codereview-1"><option value="">Rate after reading</option><option>Detailed</option><option>Mostly Detailed</option><option>In between</option><option>Mostly Concise</option><option>Concise</option></select></div><div class="field" data-type="select"><label class="field-label" for="scale-codereview-2">Code Review: Structured ↔ Loose</label><select id="scale-codereview-2" name="scale-codereview-2"><option value="">Rate after reading</option><option>Structured</option><option>Mostly Structured</option><option>In between</option><option>Mostly Loose</option><option>Loose</option></select></div><div class="field" data-type="select"><label class="field-label" for="scale-codereview-3">Code Review: Self contained ↔ Cross referenced</label><select id="scale-codereview-3" name="scale-codereview-3"><option value="">Rate after reading</option><option>Self contained</option><option>Mostly Self contained</option><option>In between</option><option>Mostly Cross referenced</option><option>Cross referenced</option></select></div></div><div data-review-skill="implement"><h4>Implement</h4><div class="field" data-type="textarea"><label class="field-label" for="review-implement">What did you expect, and what did the Markdown actually say?</label><textarea id="review-implement" name="review-implement" placeholder="One or two sentences — a guess is welcome."></textarea></div><div class="field" data-type="select"><label class="field-label" for="scale-implement-0">Implement: Explicit ↔ Implicit</label><select id="scale-implement-0" name="scale-implement-0"><option value="">Rate after reading</option><option>Explicit</option><option>Mostly Explicit</option><option>In between</option><option>Mostly Implicit</option><option>Implicit</option></select></div><div class="field" data-type="select"><label class="field-label" for="scale-implement-1">Implement: Detailed ↔ Concise</label><select id="scale-implement-1" name="scale-implement-1"><option value="">Rate after reading</option><option>Detailed</option><option>Mostly Detailed</option><option>In between</option><option>Mostly Concise</option><option>Concise</option></select></div><div class="field" data-type="select"><label class="field-label" for="scale-implement-2">Implement: Structured ↔ Loose</label><select id="scale-implement-2" name="scale-implement-2"><option value="">Rate after reading</option><option>Structured</option><option>Mostly Structured</option><option>In between</option><option>Mostly Loose</option><option>Loose</option></select></div><div class="field" data-type="select"><label class="field-label" for="scale-implement-3">Implement: Self contained ↔ Cross referenced</label><select id="scale-implement-3" name="scale-implement-3"><option value="">Rate after reading</option><option>Self contained</option><option>Mostly Self contained</option><option>In between</option><option>Mostly Cross referenced</option><option>Cross referenced</option></select></div></div><div data-review-skill="prototype"><h4>Prototype</h4><div class="field" data-type="textarea"><label class="field-label" for="review-prototype">What did you expect, and what did the Markdown actually say?</label><textarea id="review-prototype" name="review-prototype" placeholder="One or two sentences — a guess is welcome."></textarea></div><div class="field" data-type="select"><label class="field-label" for="scale-prototype-0">Prototype: Explicit ↔ Implicit</label><select id="scale-prototype-0" name="scale-prototype-0"><option value="">Rate after reading</option><option>Explicit</option><option>Mostly Explicit</option><option>In between</option><option>Mostly Implicit</option><option>Implicit</option></select></div><div class="field" data-type="select"><label class="field-label" for="scale-prototype-1">Prototype: Detailed ↔ Concise</label><select id="scale-prototype-1" name="scale-prototype-1"><option value="">Rate after reading</option><option>Detailed</option><option>Mostly Detailed</option><option>In between</option><option>Mostly Concise</option><option>Concise</option></select></div><div class="field" data-type="select"><label class="field-label" for="scale-prototype-2">Prototype: Structured ↔ Loose</label><select id="scale-prototype-2" name="scale-prototype-2"><option value="">Rate after reading</option><option>Structured</option><option>Mostly Structured</option><option>In between</option><option>Mostly Loose</option><option>Loose</option></select></div><div class="field" data-type="select"><label class="field-label" for="scale-prototype-3">Prototype: Self contained ↔ Cross referenced</label><select id="scale-prototype-3" name="scale-prototype-3"><option value="">Rate after reading</option><option>Self contained</option><option>Mostly Self contained</option><option>In between</option><option>Mostly Cross referenced</option><option>Cross referenced</option></select></div></div></div></details>    </section>
 
     <!-- ===================== 6. STEP 1 SETUP ===================== -->
     <section class="ws-section" id="practical-setup" data-short="Practical 1 · Setup" data-time="~15 min">
@@ -541,11 +491,12 @@
       </div>
       <p class="lede">Install what you picked above — then confirm you actually understand what setup did, rather than just following steps blindly.</p>
 
+<div class="reference" id="agentSetup"></div>
       <div class="field checklist" data-type="checkbox-group">
         <span class="field-label">Self-check — tick once true for you</span>
         <div class="options">
           <label><input type="checkbox" name="setup-check-location"> I can point to where the skill files actually live on disk</label>
-          <label><input type="checkbox" name="setup-check-manual"> I understand skills run manually — invoked by me or by the model, never automatically</label>
+          <label><input type="checkbox" name="setup-check-manual"> I checked which skills require explicit invocation and which allow model invocation</label>
           <label><input type="checkbox" name="setup-check-augment"> I understand skills augment the model; they don't replace judgement</label>
           <label><input type="checkbox" name="setup-check-progressive"> I understand why progressive loading (header vs. full body) matters for context</label>
         </div>
@@ -560,11 +511,12 @@
     <!-- ===================== 7. STEP 2 TRIAGE ===================== -->
     <section class="ws-section" id="practical-triage" data-short="Practical 2 · Triage" data-time="~25 min">
       <div class="section-head">
-        <div class="headline"><span class="eyebrow">Practical · Step 2</span><h2>Triage a bug</h2></div>
+        <div class="headline"><span class="eyebrow">Practical · Step 2</span><h2>Triage a bug (optional)</h2></div>
         <span class="time-chip">~25 min</span>
       </div>
-      <p class="lede">Pick a bug from the storefront and work it through a triage skill. Fill this worksheet out as you go — before, during, and after running the skill.</p>
+      <p class="lede">Choose from the <a href="https://github.com/perth-ai/workshop-mp-skills-for-ai-native-devs/issues">existing bug list</a>, or use a bug you found yourself. Start by describing it <strong>in your own words</strong>. Triage can help turn that into a useful report. Using the Triage skill is optional; you can take your description straight to planning the fix.</p>
 
+<div class="reference" id="triageGuidance"></div><div class="field" data-type="textarea"><label class="field-label" for="bug-own-words">Describe the bug in your own words</label><textarea id="bug-own-words" name="bug-own-words" placeholder="One or two sentences — a guess is welcome."></textarea></div>
       <div class="reference">
         <strong>Quick architecture reference</strong> (python-eshop): <code>Router → Service → DB Client → SQLite</code>, with a React/Vite frontend talking to a FastAPI backend over JSON.
         <table>
@@ -639,6 +591,7 @@
       </div>
       <p class="lede">Build the fix and push it to a branch, using the skills from Step 1 — e.g. an implement/code-review skill for the build-and-check loop.</p>
 
+<div class="reference" id="implementGuidance"></div>
       <div class="field" data-type="text">
         <label class="field-label" for="implement-branch">Branch name</label>
         <input type="text" id="implement-branch" name="implement-branch" placeholder="e.g. fix/basket-count-after-checkout">
@@ -744,7 +697,7 @@
       </div>
     </section>
 
-    <!-- ===================== JOURNAL / EXPORT ===================== -->
+<!-- ===================== JOURNAL / EXPORT ===================== -->
     <section class="ws-section" id="journal" data-short="Your workshop journal" data-time="">
       <div class="section-head">
         <div class="headline"><span class="eyebrow">Last step</span><h2>Your workshop journal</h2></div>
@@ -779,6 +732,8 @@
       Perth AI Club · Skills for AI-Native Devs workshop · see <code>README.md</code> and <code>workshop/presentation.html</code> for the rest of the materials.
     </footer>
 
+<nav class="slide-nav" aria-label="Workshop slides"><button class="btn" id="previousSlide">← Previous</button><span id="slidePosition" aria-live="polite"></span><button class="btn primary" id="nextSlide">Next →</button></nav>
+<p class="field-hint">Setup guidance checked 25 October 2026. Sources: <a href="https://code.claude.com/docs/en/skills">Claude skills</a> · <a href="https://developers.openai.com/codex/skills/">OpenAI skills</a> · <a href="https://github.com/mattpocock/skills">Matt Pocock</a>.</p>
   </main>
 </div>
 
@@ -1114,18 +1069,27 @@
     });
   }
 
+  var slideIndex = 0;
+  function showSlide(id, focus) {
+    var sections = Array.from(document.querySelectorAll('.ws-section'));
+    var index = sections.findIndex(function(s) { return s.id === id; });
+    if (index < 0) index = 0;
+    slideIndex = index;
+    sections.forEach(function(s, i) { s.hidden = i !== index; s.classList.remove('slide-in'); });
+    var current = sections[index];
+    void current.offsetWidth;
+    current.classList.add('slide-in');
+    document.querySelectorAll('.toc-item').forEach(function(a) { var active = a.dataset.target === current.id; a.classList.toggle('active', active); if(active) a.setAttribute('aria-current','step'); else a.removeAttribute('aria-current'); });
+    document.getElementById('previousSlide').disabled = index === 0;
+    document.getElementById('nextSlide').disabled = index === sections.length - 1;
+    document.getElementById('slidePosition').textContent = (index + 1) + ' / ' + sections.length;
+    window.scrollTo(0, 0);
+    if(focus) { var heading = current.querySelector('h1, h2'); heading.tabIndex = -1; heading.focus({preventScroll:true}); }
+  }
   function wireActiveSectionTracking() {
-    var items = Array.prototype.slice.call(document.querySelectorAll('.toc-item'));
-    if (!('IntersectionObserver' in window)) return;
-    var observer = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (!entry.isIntersecting) return;
-        items.forEach(function (i) { i.classList.remove('active'); });
-        var match = items.find(function (i) { return i.dataset.target === entry.target.id; });
-        if (match) match.classList.add('active');
-      });
-    }, { rootMargin: '-20% 0px -70% 0px', threshold: 0 });
-    document.querySelectorAll('.ws-section').forEach(function (s) { observer.observe(s); });
+    window.addEventListener('hashchange', function() { showSlide(location.hash.slice(1), true); });
+    ['previousSlide','nextSlide'].forEach(function(id, n) { document.getElementById(id).addEventListener('click', function() { var sections = document.querySelectorAll('.ws-section'); location.hash = sections[slideIndex + (n ? 1 : -1)].id; }); });
+    showSlide(location.hash.slice(1), false);
   }
 
   // ---------- Click-anywhere-on-card skill toggles ----------
@@ -1156,6 +1120,7 @@
           }
           var fb = quiz.querySelector('.quiz-feedback');
           if (fb) fb.hidden = false;
+          var example = quiz.querySelector('details'); if (example && btn.dataset.correct === 'true') example.open = true;
         });
       });
     });
@@ -1168,8 +1133,39 @@
     updateRangeOutputs();
     renderJournalPreview();
     updateSaveIndicator();
-    var levelChecked = document.querySelector('[name="experience-level"]:checked');
-    applyLevel(levelChecked ? levelChecked.value : null);
+    personalize();
+  }
+
+  // ---------- Personalized instructions ----------
+  function chosen(name) { var el = document.querySelector('[name="' + name + '"]:checked'); return el ? el.value : ''; }
+  function personalize() {
+    var os = chosen('participant-os'), tool = chosen('participant-tool'), level = chosen('terminal-level');
+    var novice = level === 'new' || level === 'beginner';
+    document.getElementById('profileAdvice').textContent = tool === 'other' && novice ? 'We recommend Claude Code for this workshop: it gives you a supported workflow with guided instructions. Select Claude Code above to use that guidance. If you keep Other, the practical instructions assume advanced knowledge of your chosen harness.' : 'Your selections tailor setup and practical instructions below. You can change them at any time.';
+    applyLevel(tool === 'other' ? 'power' : novice ? 'new' : level === 'advanced' ? 'power' : 'tried');
+    var ready = os && tool && level;
+    if (!ready) { ['appSetup','agentSetup','triageGuidance','implementGuidance'].forEach(function(id) { document.getElementById(id).textContent = 'Choose your operating system, tool, and command-line comfort on the Welcome slide to see tailored instructions.'; }); }
+    else {
+      var detailed = novice && tool !== 'other';
+      var terminal = os === 'windows' ? 'PowerShell (Start → search PowerShell)' : 'Terminal (Spotlight → search Terminal)';
+      var root = os === 'windows' ? 'cd "C:\\path\\to\\workshop-mp-skills-for-ai-native-devs"' : 'cd "/path/to/workshop-mp-skills-for-ai-native-devs"';
+      document.getElementById('appSetup').innerHTML = '<p>Full instructions: <a href="../README.md">repository README.md</a> and <a href="../python-eshop/README.md">app README.md</a>. Prerequisites: Python 3.11+, Node.js 18+, and uv.</p>' + (detailed ? '<p>Open '+terminal+'. A terminal is a text interface for running commands. Replace the example path with your downloaded repository folder. Paste commands one line at a time and press Enter. Keep both server windows open; use Ctrl+C to stop a server.</p>' : '<p>Use '+terminal+'; start from the repository root in each of two terminals.</p>') + '<p>Terminal 1 — backend:</p><pre>'+root+'\ncd python-eshop/backend\nuv sync\nuv run python run.py</pre><p>Terminal 2 — frontend (start from the repo root again):</p><pre>'+root+'\ncd python-eshop/frontend\nnpm install\nnpm run dev</pre><p>Open <a href="http://127.0.0.1:4321">http://127.0.0.1:4321</a>. Sign in with <code>demouser@perthai.com.au</code> / <code>Pass@word1</code>. Backend runs on port 8765.</p>';
+      var agent = tool === 'codex' ? 'Codex' : tool === 'other' ? 'your harness' : 'Claude Code';
+      var prefix = tool === 'codex' ? '$' : '/';
+      var installation = tool === 'desktop' ? '<p>In Claude Desktop, use its Code workspace and select this local repository as the project folder. Use a local coding session for this exercise. Ordinary Chat does not provide the same local coding workflow. See the <a href="https://code.claude.com/docs/en/desktop">official Desktop guide</a>.</p>' : tool === 'claude' ? '<p>In '+terminal+', install using the <a href="https://code.claude.com/docs/en/quickstart">official Claude Code quickstart</a>:</p><pre>'+(os === 'windows' ? 'irm https://claude.ai/install.ps1 | iex' : 'curl -fsSL https://claude.ai/install.sh | bash')+'</pre><p>Then change to the repository root, run <code>claude</code>, and follow sign-in.</p>' : tool === 'codex' ? '<p>Open this local repository in Codex, or use the <a href="https://developers.openai.com/codex/cli/">official Codex CLI setup</a> and start a session from its root. In the CLI, use <code>/skills</code> or type <code>$</code> to find installed skills.</p>' : '<p>Advanced path: configure repository access, tool permissions, skill discovery, and explicit invocation for your harness. Adapt the installer agent choice and skill paths yourself.</p>';
+      document.getElementById('agentSetup').innerHTML = '<h3>Your '+agent+' setup</h3>'+installation+'<p>In '+terminal+' at the repository root, run the editable-file installer:</p><pre>npx skills@latest add mattpocock/skills</pre><p>Choose '+(tool === 'other' ? 'your agent' : tool === 'codex' ? 'Codex' : 'Claude Code')+' in the installer. Select Ask Matt, Grill with Docs, your 2–3 extras, and <code>setup-matt-pocock-skills</code>. This installs a shortlist rather than the full plugin. See <a href="https://github.com/mattpocock/skills#installation-30-second-setup">Matt’s current installation guide</a>.</p>'+(detailed ? '<p>Run the installer in the terminal, not in the agent chat. Use its prompts to choose skills and a project install. If npx is missing, install Node.js first. Return to the agent session after installation.</p>' : '')+'<p>In the agent, invoke <code>'+prefix+'setup-matt-pocock-skills</code> once for this repo; choose your issue tracker (local files are an option). Then invoke <code>'+prefix+'grill-with-docs</code> to explore your intended fix before coding. Select the exact installed entry from the skill menu if it has a namespace.</p><p>Locate the installed SKILL.md files '+(tool === 'codex' ? 'in .agents/skills for a project install' : tool === 'other' ? 'using your harness’s discovery rules' : 'in .claude/skills for a project install')+' and inspect their YAML frontmatter.</p>';
+      document.getElementById('triageGuidance').innerHTML = '<p>'+ (detailed ? 'Type your own description below first, then copy it into your agent session. You do not need a polished bug report. ' : 'Start with your own description of the observed bug. ') + (chosen('participant-tool') === 'other' ? 'If you selected Triage, explicitly invoke it using your harness’s syntax.' : 'If you selected Triage, invoke <code>'+prefix+'triage [your description in your own words]</code>.')+' If you did not select it, use your description directly to plan the fix with Grill with Docs. Complete the remaining notes as useful; Triage helps clarify the report.</p>';
+      document.getElementById('implementGuidance').innerHTML = '<p>'+(detailed ? 'Return to the same project session. Ask the agent to create a fix branch, explain the proposed change, and show how it will verify the bug is fixed. Review its plan before it edits. ' : 'Create a fix branch, agree scope and verification, then inspect the diff. ')+(document.querySelector('[name="skill-select-implement"]').checked ? 'Invoke <code>'+prefix+'implement</code> with the agreed brief.' : 'Ask the agent to implement the agreed fix and run a focused check.')+' '+(document.querySelector('[name="skill-select-codereview"]').checked ? 'Then invoke <code>'+prefix+'code-review</code> with the branch’s starting commit as the review baseline.' : 'Review the diff and test results yourself.')+' Verify the shopping flow in the browser before committing and pushing your branch.</p>';
+    }
+    var actions = {triage:'Use Triage optionally to clarify your bug report and prepare an actionable brief.',wayfinder:'Use Wayfinder if the work is too large for one fix; map it before implementing.',codereview:'Use Code Review after implementing, with a named baseline and the agreed brief.',implement:'Use Implement for the agreed fix after planning and clarifying the bug.',prototype:'Use Prototype for an uncertain design question; record the answer before starting the production fix.'};
+    var selected = Object.keys(actions).filter(function(id) { return document.querySelector('[name="skill-select-'+id+'"]').checked; });
+    document.getElementById('selectedSkillGuidance').innerHTML = '<h3>Your chosen workflow</h3>' + (selected.length ? selected.map(function(id) {return '<p>'+actions[id]+'</p>';}).join('') : '<p>Choose 2–3 extras above to see where each fits into the practical.</p>');
+    document.querySelectorAll('[data-review-skill]').forEach(function(el) { var id = el.dataset.reviewSkill; el.hidden = id !== 'ask-matt' && id !== 'grill-with-docs' && selected.indexOf(id) < 0; });
+    if (document.getElementById('inspectInvocation').checked) {
+      var invocation = document.getElementById('invocationExample');
+      invocation.open = true;
+      invocation.closest('.quiz-feedback').hidden = false;
+    }
   }
 
   // ---------- Wiring ----------
