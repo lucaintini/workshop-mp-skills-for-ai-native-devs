@@ -1,6 +1,6 @@
 # Facilitator Guide
 
-Detailed run sheet for the workshop summarised in the [top-level README](../README.md). Pair this with [presentation.html](presentation.html), which carries the slides for each segment below.
+Detailed run sheet for the workshop summarised in the [top-level README](../README.md). Pair this with [presentation.html](presentation.html), which carries the slides for each segment below, and hand attendees [handout.html](handout.html) — a self-contained, interactive participant workbook that mirrors this run sheet with reflection prompts for every segment. It autosaves answers to the browser's local storage only and lets each attendee export their own notes as Markdown at the end; nothing is uploaded anywhere.
 
 ## Suggested pacing
 

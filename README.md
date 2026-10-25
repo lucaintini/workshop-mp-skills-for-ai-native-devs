@@ -23,4 +23,4 @@ The practical component follows:
 
 Attendees who finish early are encouraged to explore further skills and capabilities on their own.
 
-See the [workshop folder](workshop/README.md) for the detailed facilitator run sheet and [slides](workshop/presentation.html).
+See the [workshop folder](workshop/README.md) for the detailed facilitator run sheet, [slides](workshop/presentation.html), and the [interactive participant handout](workshop/handout.html) — a self-contained worksheet attendees can fill in as they go and export as Markdown at the end, with everything kept on their own device.
