@@ -85,6 +85,11 @@ function Invoke-WorkshopRuntimeChecks {
     $health = & $GetJson "$BaseUrl/api/health"
     if ($health.status -ne 'ok') { throw 'Backend proxy health check failed.' }
 
+    $homePage = & $GetWeb "$BaseUrl/"
+    if ($homePage.StatusCode -ne 200 -or $homePage.Headers['Content-Security-Policy'] -notmatch "frame-ancestors 'none'") {
+        throw 'The browser document is missing its anti-framing policy.'
+    }
+
     $catalog = & $GetJson "$BaseUrl/api/catalog/items"
     if (@($catalog.items).Count -lt 1) { throw 'The catalog is empty.' }
     $products = @($catalog.items)
@@ -108,4 +113,42 @@ function Invoke-WorkshopRuntimeChecks {
     $products.Count
 }
 
-Export-ModuleMember -Function Find-WorkshopTool, Test-WorkshopProcessEvidence, Get-MattPocockSetupSkillPath, Get-WorkshopServiceAction, Invoke-WorkshopRuntimeChecks
+function Invoke-WithWorkshopFrontendPaused {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][bool]$IsRunning,
+        [Parameter(Mandatory)][scriptblock]$StopFrontend,
+        [Parameter(Mandatory)][scriptblock]$Work,
+        [Parameter(Mandatory)][scriptblock]$StartFrontend,
+        [Parameter(Mandatory)][scriptblock]$WaitFrontend
+    )
+
+    if ($IsRunning) { & $StopFrontend }
+    try {
+        & $Work
+    } finally {
+        if ($IsRunning) {
+            & $StartFrontend
+            & $WaitFrontend
+        }
+    }
+}
+
+function Confirm-WorkshopServices {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][ValidateSet('start', 'reuse')][string]$BackendAction,
+        [Parameter(Mandatory)][ValidateSet('start', 'reuse')][string]$FrontendAction,
+        [Parameter(Mandatory)][scriptblock]$StartBackend,
+        [Parameter(Mandatory)][scriptblock]$StartFrontend,
+        [Parameter(Mandatory)][scriptblock]$WaitBackend,
+        [Parameter(Mandatory)][scriptblock]$WaitFrontend
+    )
+
+    if ($BackendAction -eq 'start') { & $StartBackend }
+    if ($FrontendAction -eq 'start') { & $StartFrontend }
+    & $WaitBackend
+    & $WaitFrontend
+}
+
+Export-ModuleMember -Function Find-WorkshopTool, Test-WorkshopProcessEvidence, Get-MattPocockSetupSkillPath, Get-WorkshopServiceAction, Invoke-WorkshopRuntimeChecks, Invoke-WithWorkshopFrontendPaused, Confirm-WorkshopServices

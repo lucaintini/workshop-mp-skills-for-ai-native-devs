@@ -12,7 +12,6 @@ $backend = Join-Path $repo 'python-eshop\backend'
 $frontend = Join-Path $repo 'python-eshop\frontend'
 $frontendPort = 4321
 $backendPort = 8765
-$stoppedFrontend = $false
 $frontendWasRunning = $false
 
 function Invoke-Checked {
@@ -145,44 +144,38 @@ $frontendOwner = Get-PortOwner -Port $frontendPort
 if ($frontendOwner) {
     Assert-WorkshopOwner -Process $frontendOwner -ExpectedDirectory $frontend -ExpectedCommand 'vite' -Port $frontendPort
     $frontendWasRunning = $true
-    Write-Host "Stopping workshop frontend PID $($frontendOwner.ProcessId) for a clean install."
-    Stop-Process -Id $frontendOwner.ProcessId -Force
-    $stoppedFrontend = $true
 }
 
-try {
+$qualityGates = {
     Invoke-Checked -FilePath $uv -Arguments @('sync', '--python', '3.13', '--frozen') -WorkingDirectory $backend
     Invoke-Checked -FilePath $uv -Arguments @('run', '--python', '3.13', 'pytest', '-q') -WorkingDirectory $backend
+    Invoke-Checked -FilePath $uv -Arguments @('run', '--python', '3.13', 'pip-audit') -WorkingDirectory $backend
+    Invoke-Checked -FilePath $uv -Arguments @('run', '--python', '3.13', 'pip-audit', '-r', 'requirements.txt') -WorkingDirectory $backend
     Invoke-Checked -FilePath $npm -Arguments @('ci') -WorkingDirectory $frontend
     Invoke-Checked -FilePath $npm -Arguments @('test') -WorkingDirectory $frontend
     Invoke-Checked -FilePath $npm -Arguments @('run', 'build') -WorkingDirectory $frontend
     Invoke-Checked -FilePath $npm -Arguments @('audit') -WorkingDirectory $frontend
-} finally {
-    if ($stoppedFrontend) {
-        Start-WorkshopFrontend
-        Wait-WorkshopHttp -Url "http://127.0.0.1:$frontendPort/"
-    }
 }
+Invoke-WithWorkshopFrontendPaused -IsRunning $frontendWasRunning `
+    -StopFrontend { Write-Host "Stopping workshop frontend PID $($frontendOwner.ProcessId) for a clean install."; Stop-Process -Id $frontendOwner.ProcessId -Force } `
+    -Work $qualityGates `
+    -StartFrontend { Start-WorkshopFrontend } `
+    -WaitFrontend { Wait-WorkshopHttp -Url "http://127.0.0.1:$frontendPort/" }
 
 if (-not $SkipRuntimeChecks) {
     $backendOwner = Get-PortOwner -Port $backendPort
     $backendAction = Get-WorkshopServiceAction -ProcessEvidence (Get-WorkshopProcessEvidence -Process $backendOwner) -ExpectedDirectory $backend -ExpectedCommand 'run\.py|uvicorn'
-    if ($backendAction -eq 'start') {
-        Write-Host 'Starting workshop backend.'
-        Start-WorkshopProcess -FilePath $uv -Arguments @('run', '--python', '3.13', 'python', 'run.py') -WorkingDirectory $backend
-    }
-
+    $frontendAction = 'reuse'
     if (-not $frontendWasRunning) {
         $frontendOwner = Get-PortOwner -Port $frontendPort
         $frontendAction = Get-WorkshopServiceAction -ProcessEvidence (Get-WorkshopProcessEvidence -Process $frontendOwner) -ExpectedDirectory $frontend -ExpectedCommand 'vite'
-        if ($frontendAction -eq 'start') {
-            Write-Host 'Starting workshop frontend.'
-            Start-WorkshopFrontend
-        }
     }
 
-    Wait-WorkshopHttp -Url "http://127.0.0.1:$backendPort/api/health"
-    Wait-WorkshopHttp -Url "http://127.0.0.1:$frontendPort/"
+    Confirm-WorkshopServices -BackendAction $backendAction -FrontendAction $frontendAction `
+        -StartBackend { Write-Host 'Starting workshop backend.'; Start-WorkshopProcess -FilePath $uv -Arguments @('run', '--python', '3.13', 'python', 'run.py') -WorkingDirectory $backend } `
+        -StartFrontend { Write-Host 'Starting workshop frontend.'; Start-WorkshopFrontend } `
+        -WaitBackend { Wait-WorkshopHttp -Url "http://127.0.0.1:$backendPort/api/health/ready" } `
+        -WaitFrontend { Wait-WorkshopHttp -Url "http://127.0.0.1:$frontendPort/" }
 
     $productCount = Invoke-WorkshopRuntimeChecks -BaseUrl "http://127.0.0.1:$frontendPort"
     Write-Host "Runtime API, proxy, $productCount catalog images, login, and Favourites route: passed" -ForegroundColor Green

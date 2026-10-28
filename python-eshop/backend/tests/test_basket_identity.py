@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
-from jose import jwt
+import jwt
+import pytest
 
 from config import settings
 from db.seed import DEMO_EMAIL
@@ -67,7 +68,12 @@ def test_signed_in_shopper_can_manage_their_basket(client, demo_headers):
 
 
 def make_token(**overrides):
-    payload = {"sub": DEMO_EMAIL, "exp": datetime.now(timezone.utc) + timedelta(hours=1)}
+    payload = {
+        "sub": DEMO_EMAIL,
+        "exp": datetime.now(timezone.utc) + timedelta(hours=1),
+        "iss": settings.jwt_issuer,
+        "aud": settings.jwt_audience,
+    }
     payload.update(overrides)
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
@@ -96,6 +102,22 @@ def test_expired_token_is_rejected_on_orders(client):
 
     response = client.get("/api/orders", headers={"Authorization": f"Bearer {expired}"})
 
+    assert response.status_code == 401
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"iss": "untrusted-issuer"},
+        {"aud": "another-api"},
+    ],
+)
+def test_token_for_another_issuer_or_audience_is_rejected(client, overrides):
+    token = make_token(**overrides)
+    response = client.get(
+        "/api/favourites",
+        headers={"Authorization": f"Bearer {token}"},
+    )
     assert response.status_code == 401
 
 

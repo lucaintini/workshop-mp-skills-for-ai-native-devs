@@ -1,11 +1,15 @@
 from datetime import datetime, timedelta, timezone
+import uuid
 
-from jose import jwt
+import jwt
 
 from config import settings
 from db.client import DatabaseClient
 from services.basket_service import BasketService, parse_anonymous_basket_id
 from services.passwords import hash_password, verify_password
+
+
+DUMMY_PASSWORD_HASH = hash_password("invalid-password-used-for-timing-only")
 
 
 class AuthService:
@@ -31,7 +35,9 @@ class AuthService:
         self, email: str, password: str, anonymous_basket_id: str | None = None
     ) -> tuple[str, str]:
         user = self.db.get_user_by_email(email)
-        if not user or not verify_password(password, user.password_hash):
+        password_hash = user.password_hash if user else DUMMY_PASSWORD_HASH
+        password_matches = verify_password(password, password_hash)
+        if not user or not password_matches:
             raise ValueError("Invalid email or password")
 
         self._merge_anonymous_basket(anonymous_basket_id, user.email)
@@ -48,5 +54,13 @@ class AuthService:
 
     def _create_token(self, email: str) -> str:
         expire = timedelta(minutes=settings.jwt_expire_minutes)
-        payload = {"sub": email, "exp": datetime.now(timezone.utc) + expire}
+        issued_at = datetime.now(timezone.utc)
+        payload = {
+            "sub": email,
+            "iss": settings.jwt_issuer,
+            "aud": settings.jwt_audience,
+            "iat": issued_at,
+            "jti": str(uuid.uuid4()),
+            "exp": issued_at + expire,
+        }
         return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)

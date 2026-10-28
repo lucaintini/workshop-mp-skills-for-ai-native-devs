@@ -1,5 +1,3 @@
-import pytest
-
 from db.client import DatabaseClient
 
 
@@ -34,8 +32,11 @@ def test_failure_mid_checkout_leaves_no_order_and_the_basket_intact(
 
     with monkeypatch.context() as patch:
         patch.setattr(DatabaseClient, "_delete_basket_rows", fail)
-        with pytest.raises(RuntimeError):
-            checkout(client, demo_headers, basket["id"])
+        response = checkout(client, demo_headers, basket["id"])
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Internal server error"}
+    assert response.headers["X-Request-ID"]
 
     assert client.get("/api/orders", headers=demo_headers).json() == []
     after = client.get("/api/basket", headers=demo_headers).json()

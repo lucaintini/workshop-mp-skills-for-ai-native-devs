@@ -47,6 +47,13 @@ class DatabaseClient:
         with self._connection() as conn:
             conn.executescript(schema_path.read_text(encoding="utf-8"))
 
+    def ping(self) -> bool:
+        try:
+            with self._connection() as conn:
+                return conn.execute("SELECT 1").fetchone()[0] == 1
+        except sqlite3.Error:
+            return False
+
     def count_catalog_items(
         self, brand_id: int | None = None, type_id: int | None = None
     ) -> int:

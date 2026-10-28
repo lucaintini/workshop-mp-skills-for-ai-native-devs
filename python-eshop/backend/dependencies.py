@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 
 from fastapi import Depends, Header, HTTPException, status
-from jose import JWTError, jwt
+import jwt
+from jwt import PyJWTError
 
 from config import settings
 from db.client import DatabaseClient
@@ -77,9 +78,13 @@ def _invalid_session() -> HTTPException:
 def _decode_token(token: str) -> str:
     try:
         payload = jwt.decode(
-            token, settings.jwt_secret, algorithms=[settings.jwt_algorithm]
+            token,
+            settings.jwt_secret,
+            algorithms=[settings.jwt_algorithm],
+            audience=settings.jwt_audience,
+            issuer=settings.jwt_issuer,
         )
-    except JWTError:
+    except PyJWTError:
         raise _invalid_session()
     email = payload.get("sub")
     if not isinstance(email, str):

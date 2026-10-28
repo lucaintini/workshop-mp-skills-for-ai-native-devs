@@ -1,0 +1,28 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /python-eshop/frontend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Australia/Perth
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: uv
+    directory: /python-eshop/backend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Australia/Perth
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Australia/Perth
+    open-pull-requests-limit: 5

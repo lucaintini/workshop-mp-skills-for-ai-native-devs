@@ -50,7 +50,7 @@ try {
         param($uri)
         $requestedWeb.Add($uri)
         $contentType = if ($uri -like '*/static/*') { 'image/png' } else { 'text/html' }
-        [pscustomobject]@{ StatusCode = 200; Headers = @{ 'Content-Type' = $contentType } }
+        [pscustomobject]@{ StatusCode = 200; Headers = @{ 'Content-Type' = $contentType; 'Content-Security-Policy' = "frame-ancestors 'none'" } }
     }.GetNewClosure()
     $postJson = { param($uri, $body) [pscustomobject]@{ access_token = 'test-token' } }
     $count = Invoke-WorkshopRuntimeChecks -BaseUrl 'http://workshop.test' -GetJson $getJson -GetWeb $getWeb -PostJson $postJson
@@ -58,6 +58,29 @@ try {
     Assert-True ($requestedJson.Contains('http://workshop.test/api/catalog/items?page=2')) 'Runtime checks skipped the second catalog page.'
     Assert-True ($requestedWeb.Contains('http://workshop.test/static/1.png') -and $requestedWeb.Contains('http://workshop.test/static/2.png')) 'Runtime checks skipped a product image.'
     Assert-True ($requestedWeb.Contains('http://workshop.test/favourites')) 'Runtime checks skipped the browser-facing Favourites route.'
+    Assert-True ($requestedWeb.Contains('http://workshop.test/')) 'Runtime checks skipped browser security headers.'
+
+    $lifecycle = [Collections.Generic.List[string]]::new()
+    $workFailed = $false
+    try {
+        Invoke-WithWorkshopFrontendPaused -IsRunning $true `
+            -StopFrontend { $lifecycle.Add('stop') } `
+            -Work { $lifecycle.Add('work'); throw 'expected test failure' } `
+            -StartFrontend { $lifecycle.Add('start') } `
+            -WaitFrontend { $lifecycle.Add('wait') }
+    } catch {
+        $workFailed = $true
+    }
+    Assert-True $workFailed 'A quality-gate failure was swallowed.'
+    Assert-True (($lifecycle -join ',') -eq 'stop,work,start,wait') 'The running frontend was not restored after a quality-gate failure.'
+
+    $coldStart = [Collections.Generic.List[string]]::new()
+    Confirm-WorkshopServices -BackendAction start -FrontendAction start `
+        -StartBackend { $coldStart.Add('start-backend') } `
+        -StartFrontend { $coldStart.Add('start-frontend') } `
+        -WaitBackend { $coldStart.Add('wait-backend') } `
+        -WaitFrontend { $coldStart.Add('wait-frontend') }
+    Assert-True (($coldStart -join ',') -eq 'start-backend,start-frontend,wait-backend,wait-frontend') 'Cold service startup did not start both services before readiness checks.'
 
     Write-Host 'Workshop verification helper tests passed.' -ForegroundColor Green
 } finally {

@@ -3,6 +3,10 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 9 * * 1'
+      timezone: Australia/Perth
 
 permissions:
   contents: read
@@ -39,6 +43,11 @@ jobs:
 
       - name: Run backend tests
         run: uv run --python 3.13 pytest -q
+
+      - name: Audit Python dependencies
+        run: |
+          uv run --python 3.13 pip-audit
+          uv run --python 3.13 pip-audit -r requirements.txt
 
   frontend:
     name: Frontend quality gates

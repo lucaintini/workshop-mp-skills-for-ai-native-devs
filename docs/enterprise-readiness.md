@@ -10,6 +10,9 @@ This workshop shop is not represented as production-ready. This document separat
 - A frontend test uses axe-core rules tagged for WCAG A and AA to catch automatically detectable catalog-card regressions.
 - CI performs locked installation, backend and frontend tests, a production build, and dependency audit.
 - Windows verification exercises proxy health, all catalog pages and images, login, and the browser-facing Favourites route.
+- Separate liveness and database-backed readiness endpoints let a supervisor restart a dead process and keep an unhealthy instance out of service.
+- The verifier starts missing workshop services and waits for readiness before exercising them; its stop/start/restore paths are covered by deterministic helper tests.
+- Weekly scheduled CI detects dependency and runner drift. Dependabot proposes locked npm, uv, and GitHub Actions updates as pull requests, where the same tests must pass before merge.
 
 Automated accessibility checks are a guardrail, not a conformance claim. WCAG conformance applies to complete pages and requires criteria that automation cannot fully assess. [W3C recommends WCAG 2.2 for current applicability](https://www.w3.org/TR/WCAG22/), and [Playwright's accessibility guidance](https://playwright.dev/docs/accessibility-testing) likewise recommends combining automation with manual and inclusive testing.
 
@@ -26,6 +29,8 @@ Automated accessibility checks are a guardrail, not a conformance claim. WCAG co
 - Replace local SQLite with a managed relational database for multi-instance deployment.
 - Adopt versioned migrations, encrypted backups, restore drills, retention policy, and recovery objectives.
 - Add concurrency and failure tests around checkout and Favourite writes.
+
+SQLite deliberately keeps this workshop easy to run, but it is a single-instance scaling boundary. Horizontal scale requires a shared managed database, versioned migrations, externally stored secrets, stateless API instances behind a health-aware load balancer, and tested backup/restore and failover procedures. Merely adding replicas to the current topology would risk divergent local state.
 
 ### 3. Full observability
 
@@ -47,7 +52,10 @@ GitHub's [dependency review](https://docs.github.com/en/pull-requests/how-tos/re
 
 - Build immutable deployment artifacts, generate an SBOM, sign releases, and attach provenance.
 - Separate development and production topology, add readiness/liveness probes, and practise rollback.
+- Package the API under a production supervisor/orchestrator with bounded restart backoff, graceful shutdown, replica disruption budgets, resource limits, and rollback to the previous immutable artifact.
 - Define protected environments and required reviews before production deployment.
+
+Dependency automation is deliberately fail-safe: it opens reviewable pull requests but does not auto-merge or self-modify production. A production pipeline should deploy an immutable, signed artifact only after required tests and approval, observe health during a canary, and automatically roll back that deployment when its objective health gate fails.
 
 [SLSA 1.2](https://slsa.dev/spec/v1.2/) provides incremental supply-chain levels; Build L1 starts with provenance describing what built an artifact, how, and from which inputs.
 

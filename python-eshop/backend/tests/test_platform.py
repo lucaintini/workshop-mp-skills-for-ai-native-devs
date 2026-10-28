@@ -2,6 +2,7 @@ import json
 import logging
 import uuid
 
+from dependencies import get_db
 from main import app
 
 
@@ -53,6 +54,32 @@ def test_unhandled_failures_are_correlated_and_logged(client, caplog):
     assert response.status_code == 500
     uuid.UUID(response.headers["X-Request-ID"])
     assert response.json() == {"detail": "Internal server error"}
+    assert any(
+        record.message == "Unhandled request failure" and record.exc_info
+        for record in caplog.records
+    )
     event = json.loads(caplog.records[-1].message)
     assert event["http_status_code"] == 500
     assert event["request_id"] == response.headers["X-Request-ID"]
+
+
+def test_readiness_reports_database_availability(client):
+    response = client.get("/api/health/ready")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ready"}
+
+
+def test_readiness_fails_when_database_is_unavailable(client):
+    class UnavailableDatabase:
+        def ping(self):
+            return False
+
+    app.dependency_overrides[get_db] = lambda: UnavailableDatabase()
+    try:
+        response = client.get("/api/health/ready")
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Database unavailable"}
