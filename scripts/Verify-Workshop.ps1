@@ -7,40 +7,13 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
+Import-Module (Join-Path $PSScriptRoot 'WorkshopVerification.psm1') -Force
 $backend = Join-Path $repo 'python-eshop\backend'
 $frontend = Join-Path $repo 'python-eshop\frontend'
 $frontendPort = 4321
 $backendPort = 8765
 $stoppedFrontend = $false
 $frontendWasRunning = $false
-
-function Resolve-WorkshopTool {
-    param(
-        [Parameter(Mandatory)][string]$Name,
-        [Parameter(Mandatory)][string[]]$Patterns
-    )
-
-    $command = Get-Command $Name -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($command) { return $command.Source }
-
-    $roots = @(
-        (Join-Path (Split-Path -Parent $repo) '.tools'),
-        (Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Packages'),
-        (Join-Path $env:LOCALAPPDATA 'OpenAI\Codex\bin'),
-        (Join-Path $env:USERPROFILE '.local\bin')
-    ) | Where-Object { Test-Path -LiteralPath $_ }
-
-    foreach ($root in $roots) {
-        foreach ($pattern in $Patterns) {
-            $match = Get-ChildItem -LiteralPath $root -Recurse -File -Filter $pattern -ErrorAction SilentlyContinue |
-                Sort-Object FullName -Descending |
-                Select-Object -First 1
-            if ($match) { return $match.FullName }
-        }
-    }
-
-    throw "Required tool '$Name' was not found on PATH or in known workshop, WinGet, or Codex locations."
-}
 
 function Invoke-Checked {
     param(
@@ -101,7 +74,7 @@ function Assert-WorkshopOwner {
         $current = Get-CimInstance Win32_Process -Filter "ProcessId = $($current.ParentProcessId)" -ErrorAction SilentlyContinue
     }
     $processTree = $evidence -join "`n"
-    if ($processTree -notmatch $ExpectedCommand -or $processTree -notmatch [regex]::Escape($ExpectedDirectory)) {
+    if (-not (Test-WorkshopProcessEvidence -Evidence $processTree -ExpectedDirectory $ExpectedDirectory -ExpectedCommand $ExpectedCommand)) {
         throw "Port $Port belongs to an unrelated process (PID $($Process.ProcessId)); refusing to reuse or stop it."
     }
 }
@@ -117,9 +90,19 @@ function Start-WorkshopProcess {
         -WindowStyle Hidden -Environment @{ Path = $env:Path } | Out-Null
 }
 
-$uv = Resolve-WorkshopTool -Name 'uv.exe' -Patterns @('uv.exe')
-$npm = Resolve-WorkshopTool -Name 'npm.cmd' -Patterns @('npm.cmd')
-$codex = Resolve-WorkshopTool -Name 'codex.exe' -Patterns @('codex.exe', 'codex.cmd')
+function Start-WorkshopFrontend {
+    Start-WorkshopProcess -FilePath $npm -Arguments @('run', 'dev', '--', '--host', '127.0.0.1', '--port', "$frontendPort", '--strictPort') -WorkingDirectory $frontend
+}
+
+$toolRoots = @(
+    (Join-Path (Split-Path -Parent $repo) '.tools'),
+    (Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Packages'),
+    (Join-Path $env:LOCALAPPDATA 'OpenAI\Codex\bin'),
+    (Join-Path $env:USERPROFILE '.local\bin')
+)
+$uv = Find-WorkshopTool -Name 'uv.exe' -Patterns @('uv.exe') -FallbackRoots $toolRoots
+$npm = Find-WorkshopTool -Name 'npm.cmd' -Patterns @('npm.cmd') -FallbackRoots $toolRoots
+$codex = Find-WorkshopTool -Name 'codex.exe' -Patterns @('codex.exe', 'codex.cmd') -FallbackRoots $toolRoots
 $nodeDirectory = Split-Path -Parent $npm
 $env:Path = "$nodeDirectory;$env:Path"
 
@@ -134,7 +117,7 @@ if ($plugin.Count -ne 1 -or -not $plugin[0].enabled) {
     throw 'The mattpocock-skills@mattpocock plugin is not installed and enabled.'
 }
 
-$skillPath = Join-Path $env:USERPROFILE ".codex\plugins\cache\mattpocock\mattpocock-skills\$($plugin[0].version)\skills\engineering\setup-matt-pocock-skills\SKILL.md"
+$skillPath = Get-MattPocockSetupSkillPath -UserProfile $env:USERPROFILE -Version $plugin[0].version
 if (-not (Test-Path -LiteralPath $skillPath)) {
     throw "The setup-matt-pocock-skills file for installed plugin version $($plugin[0].version) is missing."
 }
@@ -169,7 +152,7 @@ try {
     Invoke-Checked -FilePath $npm -Arguments @('audit') -WorkingDirectory $frontend
 } finally {
     if ($stoppedFrontend) {
-        Start-WorkshopProcess -FilePath $npm -Arguments @('run', 'dev', '--', '--host', '127.0.0.1', '--port', "$frontendPort", '--strictPort') -WorkingDirectory $frontend
+        Start-WorkshopFrontend
         Wait-WorkshopHttp -Url "http://127.0.0.1:$frontendPort/"
     }
 }
@@ -189,7 +172,7 @@ if (-not $SkipRuntimeChecks) {
             Assert-WorkshopOwner -Process $frontendOwner -ExpectedDirectory $frontend -ExpectedCommand 'vite' -Port $frontendPort
         } else {
             Write-Host 'Starting workshop frontend.'
-            Start-WorkshopProcess -FilePath $npm -Arguments @('run', 'dev', '--', '--host', '127.0.0.1', '--port', "$frontendPort", '--strictPort') -WorkingDirectory $frontend
+            Start-WorkshopFrontend
         }
     }
 

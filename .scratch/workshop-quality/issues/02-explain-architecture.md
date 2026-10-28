@@ -4,8 +4,8 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] The Shopper-to-product journey is the first diagram.
-- [ ] High-level, low-level, runtime/hardware, and data-flow views are present.
-- [ ] Repository and PR navigation point directly to the architecture evidence.
+- [x] The Shopper-to-product journey is the first diagram.
+- [x] High-level, low-level, runtime/hardware, and data-flow views are present.
+- [x] Repository and PR navigation point directly to the architecture evidence.

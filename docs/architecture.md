@@ -45,17 +45,18 @@ flowchart TB
     end
 
     subgraph Api[FastAPI process :8765]
+        Context[Request correlation and security middleware]
         Routers[HTTP routers]
         Services[Domain services]
         DbClient[Database client]
         Static[Product images]
-        Routers --> Services --> DbClient
+        Context --> Routers --> Services --> DbClient
     end
 
     Database[(SQLite database)]
 
     React --> Assets
-    React -->|JSON and JWT| Proxy --> Routers
+    React -->|JSON, JWT, and request ID| Proxy --> Context
     React -->|image requests| Proxy --> Static
     DbClient -->|parameterised SQL| Database
 ```
@@ -143,6 +144,7 @@ sequenceDiagram
     actor Shopper
     participant Card as ProductCard
     participant API as Frontend API client
+    participant Context as Request context middleware
     participant Auth as Auth dependency
     participant Router as Favourites router
     participant Service as Favourites service
@@ -151,13 +153,15 @@ sequenceDiagram
     Shopper->>Card: select heart
     Card->>Card: update heart optimistically
     Card->>API: save or remove product
-    API->>Auth: request with JWT
+    API->>Context: request with JWT and optional request ID
+    Context->>Auth: validated or generated request ID
     Auth-->>Router: authenticated Shopper email
     Router->>Service: apply Favourite command
     Service->>DB: account-scoped idempotent write
     DB-->>Service: committed result
     Service-->>Router: complete catalog-card data
-    Router-->>API: JSON response
+    Router-->>Context: JSON response
+    Context-->>API: response with request ID and security headers
     API-->>Card: confirm state
 
     alt request fails

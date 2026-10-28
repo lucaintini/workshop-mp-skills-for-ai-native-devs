@@ -4,9 +4,9 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Stale-PATH tools are found and exact paths are reported.
-- [ ] Only repository-owned services may be reused, stopped, or restarted.
-- [ ] Missing workshop services are launched and all public runtime checks pass.
-- [ ] All backend and frontend quality gates remain green.
+- [x] Stale-PATH tools are found and exact paths are reported.
+- [x] Only repository-owned services may be reused, stopped, or restarted.
+- [x] Missing workshop services are launched and all public runtime checks pass.
+- [x] All backend and frontend quality gates remain green.

@@ -10,6 +10,8 @@ In Part 1 you were handed a buggy, vibe-coded online store and triaged it. Those
 
 See [`docs/architecture.md`](docs/architecture.md) for the complete Shopper journey plus high-level software, low-level Favourites, runtime/hardware, and data-flow diagrams.
 
+See [`docs/enterprise-readiness.md`](docs/enterprise-readiness.md) for implemented platform controls, their limits, and the ranked standards-backed roadmap toward a production enterprise system.
+
 ## Get your own copy
 
 1. Click **Use this template** → **Create a new repository** at the top of this page, and tick **Include all branches**.

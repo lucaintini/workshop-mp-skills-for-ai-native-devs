@@ -9,6 +9,7 @@ from config import settings
 from db.ensure_assets import ensure_product_images
 from db.seed import migrate_catalog, seed_database, sync_picture_uris
 from dependencies import get_db, init_dependencies
+from middleware import RequestContextMiddleware
 from routers import auth, basket, catalog, favourites, orders
 
 
@@ -25,12 +26,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
 
+app.add_middleware(RequestContextMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Request-ID"],
 )
 
 static_dir = Path(__file__).parent / "static"
