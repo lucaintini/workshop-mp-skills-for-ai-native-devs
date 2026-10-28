@@ -15,6 +15,14 @@ from models.entities import (
 )
 
 
+_CATALOG_ITEM_SELECT = """
+    SELECT ci.*, cb.brand AS brand_name, ct.type AS type_name
+    FROM catalog_items ci
+    JOIN catalog_brands cb ON cb.id = ci.catalog_brand_id
+    JOIN catalog_types ct ON ct.id = ci.catalog_type_id
+"""
+
+
 class DatabaseClient:
     def __init__(self, database_path: str):
         self.database_path = database_path
@@ -61,13 +69,7 @@ class DatabaseClient:
         offset: int,
         limit: int,
     ) -> list[CatalogItem]:
-        query = """
-            SELECT ci.*, cb.brand AS brand_name, ct.type AS type_name
-            FROM catalog_items ci
-            JOIN catalog_brands cb ON cb.id = ci.catalog_brand_id
-            JOIN catalog_types ct ON ct.id = ci.catalog_type_id
-            WHERE 1=1
-        """
+        query = _CATALOG_ITEM_SELECT + " WHERE 1=1"
         params: list = []
         if brand_id is not None:
             query += " AND ci.catalog_brand_id = ?"
@@ -83,13 +85,7 @@ class DatabaseClient:
             return [_row_to_catalog_item(row) for row in rows]
 
     def get_catalog_item_by_id(self, item_id: int) -> CatalogItem | None:
-        query = """
-            SELECT ci.*, cb.brand AS brand_name, ct.type AS type_name
-            FROM catalog_items ci
-            JOIN catalog_brands cb ON cb.id = ci.catalog_brand_id
-            JOIN catalog_types ct ON ct.id = ci.catalog_type_id
-            WHERE ci.id = ?
-        """
+        query = _CATALOG_ITEM_SELECT + " WHERE ci.id = ?"
         with self._connection() as conn:
             row = conn.execute(query, (item_id,)).fetchone()
             return _row_to_catalog_item(row) if row else None
@@ -98,29 +94,20 @@ class DatabaseClient:
         if not item_ids:
             return []
         placeholders = ",".join("?" * len(item_ids))
-        query = f"""
-            SELECT ci.*, cb.brand AS brand_name, ct.type AS type_name
-            FROM catalog_items ci
-            JOIN catalog_brands cb ON cb.id = ci.catalog_brand_id
-            JOIN catalog_types ct ON ct.id = ci.catalog_type_id
-            WHERE ci.id IN ({placeholders})
-        """
+        query = _CATALOG_ITEM_SELECT + f" WHERE ci.id IN ({placeholders})"
         with self._connection() as conn:
             rows = conn.execute(query, item_ids).fetchall()
             return [_row_to_catalog_item(row) for row in rows]
 
     def list_favourites(self, shopper_email: str) -> list[CatalogItem]:
         with self._connection() as conn:
-            rows = conn.execute(
-                """
-                SELECT ci.*, cb.brand AS brand_name, ct.type AS type_name
-                FROM favourites f
-                JOIN catalog_items ci ON ci.id = f.catalog_item_id
-                JOIN catalog_brands cb ON cb.id = ci.catalog_brand_id
-                JOIN catalog_types ct ON ct.id = ci.catalog_type_id
+            query = _CATALOG_ITEM_SELECT + """
+                JOIN favourites f ON f.catalog_item_id = ci.id
                 WHERE f.shopper_email = ?
                 ORDER BY f.saved_at DESC, f.id DESC
-                """,
+            """
+            rows = conn.execute(
+                query,
                 (shopper_email.lower(),),
             ).fetchall()
             return [_row_to_catalog_item(row) for row in rows]

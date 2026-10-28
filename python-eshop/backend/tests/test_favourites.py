@@ -1,3 +1,8 @@
+import sqlite3
+
+from fastapi.testclient import TestClient
+
+from config import settings
 from tests.conftest import login
 
 
@@ -78,4 +83,27 @@ def test_missing_catalog_item_cannot_be_favourited(client, demo_headers):
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Catalog item not found"
+    assert favourite_ids(client, demo_headers) == []
+
+
+def test_favourites_survive_application_restart(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "database_path", str(tmp_path / "restart.db"))
+    from main import app
+
+    with TestClient(app) as first_session:
+        headers = login(first_session)
+        first_session.put("/api/favourites/5", headers=headers)
+
+    with TestClient(app) as restarted_session:
+        headers = login(restarted_session)
+        assert favourite_ids(restarted_session, headers) == [5]
+
+
+def test_deleted_catalog_item_disappears_from_favourites(client, demo_headers):
+    client.put("/api/favourites/6", headers=demo_headers)
+
+    with sqlite3.connect(settings.database_path) as conn:
+        conn.execute("PRAGMA foreign_keys = ON")
+        conn.execute("DELETE FROM catalog_items WHERE id = 6")
+
     assert favourite_ids(client, demo_headers) == []

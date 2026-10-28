@@ -6,6 +6,10 @@ const FRONTEND_PORT = 4321;
 
 export default defineConfig({
   plugins: [react()],
+  test: {
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.js',
+  },
   server: {
     host: '127.0.0.1',
     port: FRONTEND_PORT,
