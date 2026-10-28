@@ -34,7 +34,7 @@ it('has no automatically detectable WCAG A or AA violations on a catalog card', 
   );
 
   const result = await axe.run(container, {
-    runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'] },
+    runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22a', 'wcag22aa'] },
     rules: { 'color-contrast': { enabled: false } },
   });
 

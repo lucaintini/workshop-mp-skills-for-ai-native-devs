@@ -24,9 +24,40 @@ try {
 
     $foreignEvidence = 'C:\other-app\node.exe server.js'
     Assert-True (-not (Test-WorkshopProcessEvidence -Evidence $foreignEvidence -ExpectedDirectory $repo -ExpectedCommand 'run\.py')) 'Foreign process evidence was accepted.'
+    Assert-True ((Get-WorkshopServiceAction -ProcessEvidence '' -ExpectedDirectory $repo -ExpectedCommand 'run\.py') -eq 'start') 'A missing service did not request startup.'
+    Assert-True ((Get-WorkshopServiceAction -ProcessEvidence $ownedEvidence -ExpectedDirectory $repo -ExpectedCommand 'run\.py') -eq 'reuse') 'An owned service was not reused.'
+    $foreignRejected = $false
+    try {
+        Get-WorkshopServiceAction -ProcessEvidence $foreignEvidence -ExpectedDirectory $repo -ExpectedCommand 'run\.py'
+    } catch {
+        $foreignRejected = $true
+    }
+    Assert-True $foreignRejected 'A foreign service owner was not rejected.'
 
     $skillPath = Get-MattPocockSetupSkillPath -UserProfile 'C:\Users\participant' -Version '1.3.1'
     Assert-True ($skillPath -match 'mattpocock-skills\\1\.3\.1\\skills\\engineering\\setup-matt-pocock-skills\\SKILL\.md$') 'The setup skill path did not bind to the requested plugin version.'
+
+    $requestedJson = [Collections.Generic.List[string]]::new()
+    $requestedWeb = [Collections.Generic.List[string]]::new()
+    $getJson = {
+        param($uri)
+        $requestedJson.Add($uri)
+        if ($uri -like '*/api/health') { return [pscustomobject]@{ status = 'ok' } }
+        if ($uri -like '*page=2') { return [pscustomobject]@{ items = @([pscustomobject]@{ picture_uri = '/static/2.png' }); total_pages = 2 } }
+        [pscustomobject]@{ items = @([pscustomobject]@{ picture_uri = '/static/1.png' }); total_pages = 2 }
+    }.GetNewClosure()
+    $getWeb = {
+        param($uri)
+        $requestedWeb.Add($uri)
+        $contentType = if ($uri -like '*/static/*') { 'image/png' } else { 'text/html' }
+        [pscustomobject]@{ StatusCode = 200; Headers = @{ 'Content-Type' = $contentType } }
+    }.GetNewClosure()
+    $postJson = { param($uri, $body) [pscustomobject]@{ access_token = 'test-token' } }
+    $count = Invoke-WorkshopRuntimeChecks -BaseUrl 'http://workshop.test' -GetJson $getJson -GetWeb $getWeb -PostJson $postJson
+    Assert-True ($count -eq 2) 'Runtime checks did not aggregate every catalog page.'
+    Assert-True ($requestedJson.Contains('http://workshop.test/api/catalog/items?page=2')) 'Runtime checks skipped the second catalog page.'
+    Assert-True ($requestedWeb.Contains('http://workshop.test/static/1.png') -and $requestedWeb.Contains('http://workshop.test/static/2.png')) 'Runtime checks skipped a product image.'
+    Assert-True ($requestedWeb.Contains('http://workshop.test/favourites')) 'Runtime checks skipped the browser-facing Favourites route.'
 
     Write-Host 'Workshop verification helper tests passed.' -ForegroundColor Green
 } finally {

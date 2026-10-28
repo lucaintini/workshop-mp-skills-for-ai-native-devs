@@ -4,6 +4,7 @@ import time
 import uuid
 
 from fastapi import Request
+from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 
@@ -31,8 +32,11 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         request_id = request_id_from(request.headers.get("X-Request-ID"))
         request.state.request_id = request_id
         started = time.perf_counter()
+        try:
+            response = await call_next(request)
+        except Exception:
+            response = JSONResponse({"detail": "Internal server error"}, status_code=500)
 
-        response = await call_next(request)
         response.headers["X-Request-ID"] = request_id
         for name, value in SECURITY_HEADERS.items():
             response.headers[name] = value

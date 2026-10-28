@@ -45,4 +45,67 @@ function Get-MattPocockSetupSkillPath {
     Join-Path $UserProfile ".codex\plugins\cache\mattpocock\mattpocock-skills\$Version\skills\engineering\setup-matt-pocock-skills\SKILL.md"
 }
 
-Export-ModuleMember -Function Find-WorkshopTool, Test-WorkshopProcessEvidence, Get-MattPocockSetupSkillPath
+function Get-WorkshopServiceAction {
+    [CmdletBinding()]
+    param(
+        [AllowEmptyString()][string]$ProcessEvidence,
+        [Parameter(Mandatory)][string]$ExpectedDirectory,
+        [Parameter(Mandatory)][string]$ExpectedCommand
+    )
+
+    if (-not $ProcessEvidence) { return 'start' }
+    if (Test-WorkshopProcessEvidence -Evidence $ProcessEvidence -ExpectedDirectory $ExpectedDirectory -ExpectedCommand $ExpectedCommand) {
+        return 'reuse'
+    }
+    throw 'The listening port belongs to an unrelated process.'
+}
+
+function Invoke-WorkshopRuntimeChecks {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$BaseUrl,
+        [scriptblock]$GetJson,
+        [scriptblock]$GetWeb,
+        [scriptblock]$PostJson
+    )
+
+    if (-not $GetJson) {
+        $GetJson = { param($uri) Invoke-RestMethod -Uri $uri -TimeoutSec 15 }
+    }
+    if (-not $GetWeb) {
+        $GetWeb = { param($uri) Invoke-WebRequest -UseBasicParsing -Uri $uri -TimeoutSec 15 }
+    }
+    if (-not $PostJson) {
+        $PostJson = {
+            param($uri, $body)
+            Invoke-RestMethod -Method Post -Uri $uri -ContentType 'application/json' -Body $body -TimeoutSec 15
+        }
+    }
+
+    $health = & $GetJson "$BaseUrl/api/health"
+    if ($health.status -ne 'ok') { throw 'Backend proxy health check failed.' }
+
+    $catalog = & $GetJson "$BaseUrl/api/catalog/items"
+    if (@($catalog.items).Count -lt 1) { throw 'The catalog is empty.' }
+    $products = @($catalog.items)
+    for ($page = 2; $page -le $catalog.total_pages; $page++) {
+        $nextPage = & $GetJson "$BaseUrl/api/catalog/items?page=$page"
+        $products += @($nextPage.items)
+    }
+    foreach ($product in $products) {
+        $image = & $GetWeb "$BaseUrl$($product.picture_uri)"
+        if ($image.StatusCode -ne 200 -or $image.Headers['Content-Type'] -notmatch '^image/') {
+            throw "Product image check failed: $($product.picture_uri)"
+        }
+    }
+
+    $body = @{ email = 'demouser@perthai.com.au'; password = 'Pass@word1' } | ConvertTo-Json
+    $auth = & $PostJson "$BaseUrl/api/auth/login" $body
+    if (-not $auth.access_token) { throw 'Demo account login failed.' }
+
+    $favouritesPage = & $GetWeb "$BaseUrl/favourites"
+    if ($favouritesPage.StatusCode -ne 200) { throw 'The browser-facing Favourites route failed.' }
+    $products.Count
+}
+
+Export-ModuleMember -Function Find-WorkshopTool, Test-WorkshopProcessEvidence, Get-MattPocockSetupSkillPath, Get-WorkshopServiceAction, Invoke-WorkshopRuntimeChecks

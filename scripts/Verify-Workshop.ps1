@@ -65,6 +65,16 @@ function Assert-WorkshopOwner {
         [Parameter(Mandatory)][int]$Port
     )
 
+    $processTree = Get-WorkshopProcessEvidence -Process $Process
+    if (-not (Test-WorkshopProcessEvidence -Evidence $processTree -ExpectedDirectory $ExpectedDirectory -ExpectedCommand $ExpectedCommand)) {
+        throw "Port $Port belongs to an unrelated process (PID $($Process.ProcessId)); refusing to reuse or stop it."
+    }
+}
+
+function Get-WorkshopProcessEvidence {
+    param($Process)
+
+    if (-not $Process) { return '' }
     $evidence = @()
     $current = $Process
     for ($depth = 0; $depth -lt 5 -and $current; $depth++) {
@@ -73,10 +83,7 @@ function Assert-WorkshopOwner {
         if (-not $current.ParentProcessId) { break }
         $current = Get-CimInstance Win32_Process -Filter "ProcessId = $($current.ParentProcessId)" -ErrorAction SilentlyContinue
     }
-    $processTree = $evidence -join "`n"
-    if (-not (Test-WorkshopProcessEvidence -Evidence $processTree -ExpectedDirectory $ExpectedDirectory -ExpectedCommand $ExpectedCommand)) {
-        throw "Port $Port belongs to an unrelated process (PID $($Process.ProcessId)); refusing to reuse or stop it."
-    }
+    $evidence -join "`n"
 }
 
 function Start-WorkshopProcess {
@@ -159,18 +166,16 @@ try {
 
 if (-not $SkipRuntimeChecks) {
     $backendOwner = Get-PortOwner -Port $backendPort
-    if ($backendOwner) {
-        Assert-WorkshopOwner -Process $backendOwner -ExpectedDirectory $backend -ExpectedCommand 'run\.py|uvicorn' -Port $backendPort
-    } else {
+    $backendAction = Get-WorkshopServiceAction -ProcessEvidence (Get-WorkshopProcessEvidence -Process $backendOwner) -ExpectedDirectory $backend -ExpectedCommand 'run\.py|uvicorn'
+    if ($backendAction -eq 'start') {
         Write-Host 'Starting workshop backend.'
         Start-WorkshopProcess -FilePath $uv -Arguments @('run', '--python', '3.13', 'python', 'run.py') -WorkingDirectory $backend
     }
 
     if (-not $frontendWasRunning) {
         $frontendOwner = Get-PortOwner -Port $frontendPort
-        if ($frontendOwner) {
-            Assert-WorkshopOwner -Process $frontendOwner -ExpectedDirectory $frontend -ExpectedCommand 'vite' -Port $frontendPort
-        } else {
+        $frontendAction = Get-WorkshopServiceAction -ProcessEvidence (Get-WorkshopProcessEvidence -Process $frontendOwner) -ExpectedDirectory $frontend -ExpectedCommand 'vite'
+        if ($frontendAction -eq 'start') {
             Write-Host 'Starting workshop frontend.'
             Start-WorkshopFrontend
         }
@@ -179,30 +184,8 @@ if (-not $SkipRuntimeChecks) {
     Wait-WorkshopHttp -Url "http://127.0.0.1:$backendPort/api/health"
     Wait-WorkshopHttp -Url "http://127.0.0.1:$frontendPort/"
 
-    $base = "http://127.0.0.1:$frontendPort"
-    $health = Invoke-RestMethod -Uri "$base/api/health" -TimeoutSec 15
-    if ($health.status -ne 'ok') { throw 'Backend proxy health check failed.' }
-
-    $catalog = Invoke-RestMethod -Uri "$base/api/catalog/items" -TimeoutSec 15
-    if (@($catalog.items).Count -lt 1) { throw 'The catalog is empty.' }
-    $products = @($catalog.items)
-    for ($page = 2; $page -le $catalog.total_pages; $page++) {
-        $nextPage = Invoke-RestMethod -Uri "$base/api/catalog/items?page=$page" -TimeoutSec 15
-        $products += @($nextPage.items)
-    }
-    foreach ($product in $products) {
-        $image = Invoke-WebRequest -UseBasicParsing -Uri "$base$($product.picture_uri)" -TimeoutSec 15
-        if ($image.StatusCode -ne 200 -or $image.Headers['Content-Type'] -notmatch '^image/') {
-            throw "Product image check failed: $($product.picture_uri)"
-        }
-    }
-
-    $body = @{ email = 'demouser@perthai.com.au'; password = 'Pass@word1' } | ConvertTo-Json
-    $auth = Invoke-RestMethod -Method Post -Uri "$base/api/auth/login" -ContentType 'application/json' -Body $body -TimeoutSec 15
-    if (-not $auth.access_token) { throw 'Demo account login failed.' }
-    $favouritesPage = Invoke-WebRequest -UseBasicParsing -Uri "$base/favourites" -TimeoutSec 15
-    if ($favouritesPage.StatusCode -ne 200) { throw 'The browser-facing Favourites route failed.' }
-    Write-Host "Runtime API, proxy, $($products.Count) catalog images, login, and Favourites route: passed" -ForegroundColor Green
+    $productCount = Invoke-WorkshopRuntimeChecks -BaseUrl "http://127.0.0.1:$frontendPort"
+    Write-Host "Runtime API, proxy, $productCount catalog images, login, and Favourites route: passed" -ForegroundColor Green
 }
 
 Write-Host 'Workshop verification passed.' -ForegroundColor Green

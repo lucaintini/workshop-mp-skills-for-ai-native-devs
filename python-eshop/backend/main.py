@@ -9,8 +9,8 @@ from config import settings
 from db.ensure_assets import ensure_product_images
 from db.seed import migrate_catalog, seed_database, sync_picture_uris
 from dependencies import get_db, init_dependencies
-from middleware import RequestContextMiddleware
 from routers import auth, basket, catalog, favourites, orders
+from routers.request_context import RequestContextMiddleware
 
 
 @asynccontextmanager
