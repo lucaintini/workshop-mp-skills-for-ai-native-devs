@@ -15,6 +15,8 @@ flowchart LR
 
 Adds private, persistent Favourites for authenticated Shoppers, including optimistic heart toggles with visible rollback errors, a protected Favourites page, account isolation, and resilient authentication transitions. Adds CI quality gates, a one-command Windows verifier, a durable workflow receipt, and multi-level Mermaid architecture documentation.
 
+See the [architecture diagrams](https://github.com/lucaintini/workshop-mp-skills-for-ai-native-devs/blob/mash/part-2-new-features/docs/architecture.md) and [six-stage workflow receipt](https://github.com/lucaintini/workshop-mp-skills-for-ai-native-devs/blob/mash/part-2-new-features/.scratch/favourites/loop.md).
+
 ## Evidence
 
 - **Before:** Shoppers had no way to save catalog items, and the repository had no CI workflow enforcing its existing checks.
