@@ -4,9 +4,9 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Authenticated list, add, and remove operations work through the HTTP interface.
-- [ ] Add and remove are idempotent, ordered newest-first, and reject missing catalog items.
-- [ ] One Shopper cannot read or change another Shopper's Favourites.
-- [ ] Existing backend tests remain green.
+- [x] Authenticated list, add, and remove operations work through the HTTP interface.
+- [x] Add and remove are idempotent, ordered newest-first, and reject missing catalog items.
+- [x] One Shopper cannot read or change another Shopper's Favourites.
+- [x] Existing backend tests remain green.
