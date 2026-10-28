@@ -48,7 +48,7 @@ Add an account-owned Favourites capability. A Shopper can toggle a Favourite fro
 - Primary seam: FastAPI HTTP endpoints through the existing TestClient and throwaway SQLite database. This catches routing, authentication, service rules, SQL, serialization, and account isolation together.
 - Cover authentication requirement, per-Shopper isolation, persistence, idempotent add/remove, nonexistent catalog items, newest-first ordering, and full catalog-card data.
 - Keep expected values independent and verify observable HTTP behaviour rather than internal calls or database rows.
-- Frontend verification uses the production Vite build and browser interaction because the repository has no frontend test harness.
+- Focused frontend behaviour uses Vitest and Testing Library at the component/router seam, supplemented by the production Vite build and browser interaction.
 - Run the full backend suite after each vertical slice and the full build/browser checks at completion.
 
 ## Out of Scope
