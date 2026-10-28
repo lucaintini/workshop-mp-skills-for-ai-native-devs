@@ -103,7 +103,7 @@ flowchart LR
     Client --> Catalog
 ```
 
-The unique Shopper/product relationship makes saves idempotent. The authenticated Shopper identity scopes every read and write. Failed optimistic changes roll back in the UI and remain visible as errors.
+The unique Shopper/product relationship makes saves idempotent. The authenticated Shopper identity scopes every read and write. Failed optimistic changes roll back in the UI and remain visible as errors. Auth state carries a monotonically increasing session generation, and each optimistic request captures both session and operation generations. Login, registration, logout, expiry, or a newer operation synchronously invalidates old continuations, so even logout and same-account login cannot let a stale request mutate the new session.
 
 ## 4. Local runtime and hardware topology
 

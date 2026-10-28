@@ -6,6 +6,7 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [email, setEmail] = useState(api.getEmail());
   const [basketCount, setBasketCount] = useState(0);
+  const [sessionVersion, setSessionVersion] = useState(0);
   const isAuthenticated = Boolean(email && api.getToken());
 
   const refreshBasket = useCallback(async () => {
@@ -25,6 +26,7 @@ export function AuthProvider({ children }) {
     const result = await api.login(loginEmail, password);
     api.setAuth(result.access_token, result.email);
     setEmail(result.email);
+    setSessionVersion((version) => version + 1);
     await refreshBasket();
     return result;
   }, [refreshBasket]);
@@ -33,6 +35,7 @@ export function AuthProvider({ children }) {
     const result = await api.register(registerEmail, password);
     api.setAuth(result.access_token, result.email);
     setEmail(result.email);
+    setSessionVersion((version) => version + 1);
     await refreshBasket();
     return result;
   }, [refreshBasket]);
@@ -41,6 +44,7 @@ export function AuthProvider({ children }) {
     function handleExpired() {
       setEmail(null);
       setBasketCount(0);
+      setSessionVersion((version) => version + 1);
       const from = window.location.pathname;
       if (from !== '/login') {
         window.location.assign(`/login?expired=1&from=${encodeURIComponent(from)}`);
@@ -54,11 +58,13 @@ export function AuthProvider({ children }) {
     api.clearAuth();
     setEmail(null);
     setBasketCount(0);
+    setSessionVersion((version) => version + 1);
   }, []);
 
   const value = useMemo(
     () => ({
       email,
+      sessionVersion,
       isAuthenticated,
       basketCount,
       refreshBasket,
@@ -66,7 +72,7 @@ export function AuthProvider({ children }) {
       register,
       logout,
     }),
-    [email, isAuthenticated, basketCount, refreshBasket, login, register, logout],
+    [email, sessionVersion, isAuthenticated, basketCount, refreshBasket, login, register, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

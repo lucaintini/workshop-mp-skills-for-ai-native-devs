@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
 export default function ProductCard({ item, onAdded, initialFavourite = false, onFavouriteChange }) {
-  const { isAuthenticated, refreshBasket } = useAuth();
+  const { isAuthenticated, refreshBasket, sessionVersion } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -12,10 +12,18 @@ export default function ProductCard({ item, onAdded, initialFavourite = false, o
   const [isFavourite, setIsFavourite] = useState(initialFavourite);
   const [favouriteLoading, setFavouriteLoading] = useState(false);
   const [favouriteError, setFavouriteError] = useState('');
+  const currentSession = useRef(sessionVersion);
+  const operationGeneration = useRef(0);
+  if (currentSession.current !== sessionVersion) {
+    currentSession.current = sessionVersion;
+    operationGeneration.current += 1;
+  }
 
   useEffect(() => {
     setIsFavourite(initialFavourite);
-  }, [initialFavourite]);
+    setFavouriteError('');
+    setFavouriteLoading(false);
+  }, [initialFavourite, sessionVersion]);
 
   async function handleAdd() {
     setLoading(true);
@@ -39,6 +47,8 @@ export default function ProductCard({ item, onAdded, initialFavourite = false, o
     }
 
     const nextFavourite = !isFavourite;
+    const requestSession = sessionVersion;
+    const requestGeneration = ++operationGeneration.current;
     setIsFavourite(nextFavourite);
     setFavouriteLoading(true);
     setFavouriteError('');
@@ -48,12 +58,27 @@ export default function ProductCard({ item, onAdded, initialFavourite = false, o
       } else {
         await api.removeFavourite(item.id);
       }
-      onFavouriteChange?.(item.id, nextFavourite);
+      if (
+        currentSession.current === requestSession &&
+        operationGeneration.current === requestGeneration
+      ) {
+        onFavouriteChange?.(item.id, nextFavourite);
+      }
     } catch (error) {
-      setIsFavourite(!nextFavourite);
-      setFavouriteError(error.message);
+      if (
+        currentSession.current === requestSession &&
+        operationGeneration.current === requestGeneration
+      ) {
+        setIsFavourite(!nextFavourite);
+        setFavouriteError(error.message);
+      }
     } finally {
-      setFavouriteLoading(false);
+      if (
+        currentSession.current === requestSession &&
+        operationGeneration.current === requestGeneration
+      ) {
+        setFavouriteLoading(false);
+      }
     }
   }
 

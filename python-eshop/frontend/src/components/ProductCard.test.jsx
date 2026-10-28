@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from '../api/client';
@@ -53,7 +53,7 @@ describe('ProductCard favourites', () => {
   });
 
   it('rolls back an optimistic favourite and shows the request error', async () => {
-    useAuth.mockReturnValue({ isAuthenticated: true, refreshBasket: vi.fn() });
+    useAuth.mockReturnValue({ sessionVersion: 1, isAuthenticated: true, refreshBasket: vi.fn() });
     let rejectSave;
     api.addFavourite.mockReturnValue(
       new Promise((_, reject) => {
@@ -77,8 +77,75 @@ describe('ProductCard favourites', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Could not save favourite');
   });
 
+  it('ignores a stale favourite failure after the shopper identity changes', async () => {
+    let identity = { sessionVersion: 1, isAuthenticated: true, refreshBasket: vi.fn() };
+    useAuth.mockImplementation(() => identity);
+    let rejectSave;
+    api.addFavourite.mockReturnValue(
+      new Promise((_, reject) => {
+        rejectSave = reject;
+      }),
+    );
+
+    const view = render(
+      <MemoryRouter>
+        <ProductCard item={item} />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: `Add ${item.name} to favourites` }));
+    identity = { sessionVersion: 2, isAuthenticated: true, refreshBasket: vi.fn() };
+    view.rerender(
+      <MemoryRouter>
+        <ProductCard item={item} />
+      </MemoryRouter>,
+    );
+    await act(async () => {
+      rejectSave(new Error('Alice request failed late'));
+      await Promise.resolve();
+    });
+
+    const heart = screen.getByRole('button', { name: `Add ${item.name} to favourites` });
+    await waitFor(() => expect(heart).toBeEnabled());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(heart).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+  });
+
+  it('ignores a late success after logout and same-account login', async () => {
+    let identity = { sessionVersion: 1, isAuthenticated: true, refreshBasket: vi.fn() };
+    useAuth.mockImplementation(() => identity);
+    let resolveSave;
+    api.addFavourite.mockReturnValue(new Promise((resolve) => { resolveSave = resolve; }));
+    const onFavouriteChange = vi.fn();
+    const view = render(
+      <MemoryRouter>
+        <ProductCard item={item} onFavouriteChange={onFavouriteChange} />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: `Add ${item.name} to favourites` }));
+    identity = { sessionVersion: 3, isAuthenticated: true, refreshBasket: vi.fn() };
+    view.rerender(
+      <MemoryRouter>
+        <ProductCard item={item} onFavouriteChange={onFavouriteChange} />
+      </MemoryRouter>,
+    );
+    await act(async () => {
+      resolveSave(item);
+      await Promise.resolve();
+    });
+
+    const heart = screen.getByRole('button', { name: `Add ${item.name} to favourites` });
+    expect(heart).toBeEnabled();
+    expect(heart).toHaveAttribute('aria-pressed', 'false');
+    expect(onFavouriteChange).not.toHaveBeenCalled();
+  });
+
   it('saves a Favourite and notifies the catalog after a successful add', async () => {
-    useAuth.mockReturnValue({ isAuthenticated: true, refreshBasket: vi.fn() });
+    useAuth.mockReturnValue({ sessionVersion: 1, isAuthenticated: true, refreshBasket: vi.fn() });
     api.addFavourite.mockResolvedValue(item);
     const onFavouriteChange = vi.fn();
 
@@ -97,7 +164,7 @@ describe('ProductCard favourites', () => {
   });
 
   it('removes a Favourite and notifies the catalog after a successful remove', async () => {
-    useAuth.mockReturnValue({ isAuthenticated: true, refreshBasket: vi.fn() });
+    useAuth.mockReturnValue({ sessionVersion: 1, isAuthenticated: true, refreshBasket: vi.fn() });
     api.removeFavourite.mockResolvedValue(null);
     const onFavouriteChange = vi.fn();
 
