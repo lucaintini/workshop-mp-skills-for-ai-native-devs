@@ -12,11 +12,20 @@ from db.seed import DEMO_EMAIL, DEMO_PASSWORD
 def no_network(monkeypatch):
     """Fail any test that tries to open an outbound connection."""
 
+    original_connect = socket.socket.connect
+
     def guard(*args, **kwargs):
         raise RuntimeError("Tests must not make network calls")
 
+    def guard_socket_connect(sock, address):
+        # Python implements socketpair() with a loopback connection on Windows.
+        # TestClient needs that internal pipe even though outbound networking is blocked.
+        if isinstance(address, tuple) and address[0] in {"127.0.0.1", "::1"}:
+            return original_connect(sock, address)
+        raise RuntimeError("Tests must not make network calls")
+
     monkeypatch.setattr(socket, "create_connection", guard)
-    monkeypatch.setattr(socket.socket, "connect", guard)
+    monkeypatch.setattr(socket.socket, "connect", guard_socket_connect)
 
 
 @pytest.fixture
