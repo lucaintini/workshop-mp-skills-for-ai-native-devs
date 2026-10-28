@@ -109,6 +109,44 @@ class DatabaseClient:
             rows = conn.execute(query, item_ids).fetchall()
             return [_row_to_catalog_item(row) for row in rows]
 
+    def list_favourites(self, shopper_email: str) -> list[CatalogItem]:
+        with self._connection() as conn:
+            rows = conn.execute(
+                """
+                SELECT ci.*, cb.brand AS brand_name, ct.type AS type_name
+                FROM favourites f
+                JOIN catalog_items ci ON ci.id = f.catalog_item_id
+                JOIN catalog_brands cb ON cb.id = ci.catalog_brand_id
+                JOIN catalog_types ct ON ct.id = ci.catalog_type_id
+                WHERE f.shopper_email = ?
+                ORDER BY f.saved_at DESC, f.id DESC
+                """,
+                (shopper_email.lower(),),
+            ).fetchall()
+            return [_row_to_catalog_item(row) for row in rows]
+
+    def save_favourite(self, shopper_email: str, catalog_item_id: int) -> None:
+        saved_at = datetime.now(timezone.utc).isoformat()
+        with self._connection() as conn:
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO favourites (
+                    shopper_email, catalog_item_id, saved_at
+                ) VALUES (?, ?, ?)
+                """,
+                (shopper_email.lower(), catalog_item_id, saved_at),
+            )
+
+    def remove_favourite(self, shopper_email: str, catalog_item_id: int) -> None:
+        with self._connection() as conn:
+            conn.execute(
+                """
+                DELETE FROM favourites
+                WHERE shopper_email = ? AND catalog_item_id = ?
+                """,
+                (shopper_email.lower(), catalog_item_id),
+            )
+
     def list_catalog_brands(self) -> list[CatalogBrand]:
         with self._connection() as conn:
             rows = conn.execute(

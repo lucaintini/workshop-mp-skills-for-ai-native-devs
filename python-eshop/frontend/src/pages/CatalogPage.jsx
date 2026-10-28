@@ -4,14 +4,17 @@ import { api } from '../api/client';
 import CatalogFilters from '../components/CatalogFilters';
 import Pagination from '../components/Pagination';
 import ProductCard from '../components/ProductCard';
+import { useAuth } from '../context/AuthContext';
 
 export default function CatalogPage() {
+  const { isAuthenticated } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [brands, setBrands] = useState([]);
   const [types, setTypes] = useState([]);
   const [catalog, setCatalog] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [favouriteIds, setFavouriteIds] = useState(new Set());
 
   const brandId = searchParams.get('brand') || '';
   const typeId = searchParams.get('type') || '';
@@ -38,6 +41,26 @@ export default function CatalogPage() {
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [brandId, typeId, page]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setFavouriteIds(new Set());
+      return;
+    }
+    api
+      .getFavourites()
+      .then((items) => setFavouriteIds(new Set(items.map((item) => item.id))))
+      .catch((err) => setError(err.message));
+  }, [isAuthenticated]);
+
+  function handleFavouriteChange(itemId, isFavourite) {
+    setFavouriteIds((current) => {
+      const next = new Set(current);
+      if (isFavourite) next.add(itemId);
+      else next.delete(itemId);
+      return next;
+    });
+  }
 
   function handleFilterChange({ brandId: nextBrand, typeId: nextType }) {
     const params = new URLSearchParams();
@@ -81,7 +104,12 @@ export default function CatalogPage() {
         <>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {catalog?.items.map((item) => (
-              <ProductCard key={item.id} item={item} />
+              <ProductCard
+                key={item.id}
+                item={item}
+                initialFavourite={favouriteIds.has(item.id)}
+                onFavouriteChange={handleFavouriteChange}
+              />
             ))}
           </div>
 

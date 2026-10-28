@@ -42,6 +42,14 @@ export default function Header() {
           {isAuthenticated ? (
             <>
               <NavLink
+                to="/favourites"
+                className={({ isActive }) =>
+                  `text-sm font-medium ${isActive ? 'text-indigo-600' : 'text-slate-600 hover:text-slate-900'}`
+                }
+              >
+                Favourites
+              </NavLink>
+              <NavLink
                 to="/orders"
                 className={({ isActive }) =>
                   `text-sm font-medium ${isActive ? 'text-indigo-600' : 'text-slate-600 hover:text-slate-900'}`

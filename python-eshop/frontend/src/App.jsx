@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import BasketPage from './pages/BasketPage';
 import CatalogPage from './pages/CatalogPage';
 import CheckoutPage from './pages/CheckoutPage';
+import FavouritesPage from './pages/FavouritesPage';
 import LoginPage from './pages/LoginPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import OrdersPage from './pages/OrdersPage';
@@ -19,6 +20,7 @@ export default function App() {
             <Route path="/" element={<CatalogPage />} />
             <Route path="/basket" element={<BasketPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />
+            <Route path="/favourites" element={<FavouritesPage />} />
             <Route path="/success" element={<SuccessPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />

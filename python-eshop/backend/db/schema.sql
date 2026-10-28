@@ -24,6 +24,14 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS favourites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    shopper_email TEXT NOT NULL REFERENCES users(email) ON DELETE CASCADE,
+    catalog_item_id INTEGER NOT NULL REFERENCES catalog_items(id) ON DELETE CASCADE,
+    saved_at TEXT NOT NULL,
+    UNIQUE(shopper_email, catalog_item_id)
+);
+
 CREATE TABLE IF NOT EXISTS baskets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     buyer_id TEXT NOT NULL UNIQUE

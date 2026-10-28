@@ -91,6 +91,12 @@ export const api = {
     return request(`/api/catalog/items?${params}`);
   },
 
+  getFavourites: () => request('/api/favourites'),
+  addFavourite: (catalogItemId) =>
+    request(`/api/favourites/${catalogItemId}`, { method: 'PUT' }),
+  removeFavourite: (catalogItemId) =>
+    request(`/api/favourites/${catalogItemId}`, { method: 'DELETE' }),
+
   getBasket: () => request('/api/basket'),
   addToBasket: (catalogItemId, quantity = 1) =>
     request('/api/basket/items', {

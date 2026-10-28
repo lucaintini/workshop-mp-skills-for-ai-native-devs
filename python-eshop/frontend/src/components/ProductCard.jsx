@@ -1,11 +1,21 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
-export default function ProductCard({ item, onAdded }) {
-  const { refreshBasket } = useAuth();
+export default function ProductCard({ item, onAdded, initialFavourite = false, onFavouriteChange }) {
+  const { isAuthenticated, refreshBasket } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [isFavourite, setIsFavourite] = useState(initialFavourite);
+  const [favouriteLoading, setFavouriteLoading] = useState(false);
+  const [favouriteError, setFavouriteError] = useState('');
+
+  useEffect(() => {
+    setIsFavourite(initialFavourite);
+  }, [initialFavourite]);
 
   async function handleAdd() {
     setLoading(true);
@@ -22,14 +32,49 @@ export default function ProductCard({ item, onAdded }) {
     }
   }
 
+  async function handleFavourite() {
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: `${location.pathname}${location.search}` } });
+      return;
+    }
+
+    const nextFavourite = !isFavourite;
+    setIsFavourite(nextFavourite);
+    setFavouriteLoading(true);
+    setFavouriteError('');
+    try {
+      if (nextFavourite) {
+        await api.addFavourite(item.id);
+      } else {
+        await api.removeFavourite(item.id);
+      }
+      onFavouriteChange?.(item.id, nextFavourite);
+    } catch (error) {
+      setIsFavourite(!nextFavourite);
+      setFavouriteError(error.message);
+    } finally {
+      setFavouriteLoading(false);
+    }
+  }
+
   return (
     <article className="card flex flex-col overflow-hidden p-0 transition hover:-translate-y-0.5 hover:shadow-md">
-      <div className="aspect-square overflow-hidden bg-slate-100">
+      <div className="relative aspect-square overflow-hidden bg-slate-100">
         <img
           src={item.picture_uri}
           alt={item.name}
           className="h-full w-full object-cover"
         />
+        <button
+          type="button"
+          onClick={handleFavourite}
+          disabled={favouriteLoading}
+          aria-label={isFavourite ? `Remove ${item.name} from favourites` : `Add ${item.name} to favourites`}
+          aria-pressed={isFavourite}
+          className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-2xl text-rose-600 shadow transition hover:scale-105 disabled:opacity-60"
+        >
+          <span aria-hidden="true">{isFavourite ? '♥' : '♡'}</span>
+        </button>
       </div>
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="flex-1">
@@ -51,6 +96,11 @@ export default function ProductCard({ item, onAdded }) {
           </button>
         </div>
         {message && <p className="text-xs font-medium text-emerald-600">{message}</p>}
+        {favouriteError && (
+          <p className="text-xs font-medium text-red-600" role="alert">
+            {favouriteError}
+          </p>
+        )}
       </div>
     </article>
   );
