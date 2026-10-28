@@ -8,6 +8,8 @@ This branch, `mash/part-2-new-features`, is the starting point for Part 2 of the
 
 In Part 1 you were handed a buggy, vibe-coded online store and triaged it. Those bugs are now fixed, with tests. The client is happy, and now they want new features. Your job is to build one properly: grill the idea, write a spec, break it into tickets, implement it test-first, and get it reviewed and merged.
 
+See [`docs/architecture.md`](docs/architecture.md) for the complete Shopper journey plus high-level software, low-level Favourites, runtime/hardware, and data-flow diagrams.
+
 ## Get your own copy
 
 1. Click **Use this template** → **Create a new repository** at the top of this page, and tick **Include all branches**.
@@ -37,6 +39,16 @@ Open http://127.0.0.1:4321 and sign in with `demouser@perthai.com.au` / `Pass@wo
 ```bash
 cd python-eshop/backend && uv run pytest
 ```
+
+On Windows, run the complete workshop guardrail from the repository root:
+
+```powershell
+pwsh -File .\scripts\Verify-Workshop.ps1
+```
+
+It discovers WinGet and workshop-local tools even when the current shell's PATH is stale, verifies the Matt Pocock plugin and setup-skill installation, runs every backend and frontend quality gate, and checks the running shop through its API and frontend proxy. If the workshop Vite server owns port 4321, the script restarts it around the clean install; it refuses to stop unrelated processes.
+
+Use `-CheckSkillInvocation` to launch a fresh read-only Codex process and prove that `$setup-matt-pocock-skills` is actually callable, rather than merely installed. This stricter diagnostic fails when Codex's plugin loader does not expose the skill.
 
 ## What's here for the review step
 

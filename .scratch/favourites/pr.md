@@ -1,25 +1,24 @@
 ## Summary
 
-```text
-Shopper
-  Catalog card heart
-    authenticated Favourites API
-      account-owned SQLite relationship
-  Favourites page
-    newest-saved catalog cards
-    Add to basket remains independent
-
-CI
-  Windows backend tests
-  Frontend tests → production build → dependency audit
+```mermaid
+flowchart LR
+    Shopper([Shopper]) --> Catalog[Catalog product]
+    Catalog --> Favourite[Save Favourite]
+    Favourite --> Revisit[Favourites page]
+    Catalog --> Basket[Add to Basket]
+    Revisit --> Basket
+    Favourite --> API[Authenticated API]
+    API --> DB[(Account-owned SQLite relationship)]
+    CI[CI guardrail] --> Tests[Backend and frontend tests]
+    CI --> Build[Build and audit]
 ```
 
-Adds private, persistent Favourites for authenticated Shoppers, including optimistic heart toggles with visible rollback errors, a protected Favourites page, account isolation, and resilient authentication transitions. Adds CI quality gates for the backend and frontend.
+Adds private, persistent Favourites for authenticated Shoppers, including optimistic heart toggles with visible rollback errors, a protected Favourites page, account isolation, and resilient authentication transitions. Adds CI quality gates, a one-command Windows verifier, a durable workflow receipt, and multi-level Mermaid architecture documentation.
 
 ## Evidence
 
 - **Before:** Shoppers had no way to save catalog items, and the repository had no CI workflow enforcing its existing checks.
-  **After:** 46 backend tests and 12 frontend tests pass; the Vite production build succeeds; `npm audit` reports 0 vulnerabilities; browser verification reaches `/favourites` successfully.
+  **After:** 46 backend tests and 12 frontend tests pass; the Vite production build succeeds; `npm audit` reports 0 vulnerabilities; browser verification reaches `/favourites` successfully. A Windows verifier now finds stale-PATH tools, protects unrelated processes, restores the local app after clean installs, and can detect when an installed plugin is not actually invocable.
 
 ## Merge Danger
 
