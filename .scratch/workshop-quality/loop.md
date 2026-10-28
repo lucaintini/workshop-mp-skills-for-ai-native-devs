@@ -8,7 +8,7 @@
 ## Spec and tickets
 
 - `spec.md` defines the Windows verifier, evidence, architecture, and PR visibility capability.
-- Tickets 01 and 02 are resolved. Ticket 03 closes when the final two-axis review, PR update, and remote CI complete.
+- Tickets 01, 02, and 03 are resolved.
 
 ## Implement and review
 
@@ -17,11 +17,13 @@
 - First review reported 3 Standards findings and 1 Spec finding.
 - Resolved the Standards findings by extracting pure helpers, adding deterministic PowerShell tests to Windows CI, and deduplicating frontend startup.
 - Resolved the Spec finding by creating this receipt and linking it from the PR evidence.
+- The final security/resilience cycle reached zero Spec findings and zero Standards findings after fixing frontend framing, diagnostic logging, cache policy, and a stale vulnerable dependency manifest.
 
 ## PR and retro
 
 - The PR body uses Mermaid and links the architecture, receipts, and enterprise-readiness evidence.
 - Retro actions implemented: deterministic helper tests, CI wiring, cohesive module extraction, process-ancestry validation, cold-service startup, and all-page image verification.
+- PR #15 exposes the architecture and cycle receipts; fork CI run `40689338149` passed its Windows backend and Ubuntu frontend jobs.
 
 ## Completion bound
 

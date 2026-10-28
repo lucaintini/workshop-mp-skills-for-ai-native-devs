@@ -10,4 +10,4 @@
 - Review pass 2: found a stale `requirements.txt`; aligned it with PyJWT and added a second manifest audit locally and in CI.
 - Final fixed point: zero Spec findings and zero Standards findings.
 - Local evidence: 59 backend tests, 13 frontend tests, both Python audits, npm audit, production build, database readiness, browser anti-framing policy, proxy/API, 12 product images, login, and Favourites passed.
-- Delivery: pending push, PR evidence update, and remote CI.
+- Delivery: commit `b7484d6` was pushed, PR #15 was retitled and its evidence updated, and fork CI run `40689338149` passed both jobs.
