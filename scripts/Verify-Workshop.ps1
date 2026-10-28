@@ -12,6 +12,7 @@ $frontend = Join-Path $repo 'python-eshop\frontend'
 $frontendPort = 4321
 $backendPort = 8765
 $stoppedFrontend = $false
+$frontendWasRunning = $false
 
 function Resolve-WorkshopTool {
     param(
@@ -83,6 +84,39 @@ function Wait-WorkshopHttp {
     throw "Service did not become ready: $Url"
 }
 
+function Assert-WorkshopOwner {
+    param(
+        [Parameter(Mandatory)]$Process,
+        [Parameter(Mandatory)][string]$ExpectedDirectory,
+        [Parameter(Mandatory)][string]$ExpectedCommand,
+        [Parameter(Mandatory)][int]$Port
+    )
+
+    $evidence = @()
+    $current = $Process
+    for ($depth = 0; $depth -lt 5 -and $current; $depth++) {
+        $evidence += [string]$current.ExecutablePath
+        $evidence += [string]$current.CommandLine
+        if (-not $current.ParentProcessId) { break }
+        $current = Get-CimInstance Win32_Process -Filter "ProcessId = $($current.ParentProcessId)" -ErrorAction SilentlyContinue
+    }
+    $processTree = $evidence -join "`n"
+    if ($processTree -notmatch $ExpectedCommand -or $processTree -notmatch [regex]::Escape($ExpectedDirectory)) {
+        throw "Port $Port belongs to an unrelated process (PID $($Process.ProcessId)); refusing to reuse or stop it."
+    }
+}
+
+function Start-WorkshopProcess {
+    param(
+        [Parameter(Mandatory)][string]$FilePath,
+        [Parameter(Mandatory)][string[]]$Arguments,
+        [Parameter(Mandatory)][string]$WorkingDirectory
+    )
+
+    Start-Process -FilePath $FilePath -ArgumentList $Arguments -WorkingDirectory $WorkingDirectory `
+        -WindowStyle Hidden -Environment @{ Path = $env:Path } | Out-Null
+}
+
 $uv = Resolve-WorkshopTool -Name 'uv.exe' -Patterns @('uv.exe')
 $npm = Resolve-WorkshopTool -Name 'npm.cmd' -Patterns @('npm.cmd')
 $codex = Resolve-WorkshopTool -Name 'codex.exe' -Patterns @('codex.exe', 'codex.cmd')
@@ -100,12 +134,11 @@ if ($plugin.Count -ne 1 -or -not $plugin[0].enabled) {
     throw 'The mattpocock-skills@mattpocock plugin is not installed and enabled.'
 }
 
-$skillFile = Get-ChildItem -LiteralPath (Join-Path $env:USERPROFILE '.codex\plugins') -Recurse -File -Filter 'SKILL.md' -ErrorAction SilentlyContinue |
-    Where-Object { $_.FullName -match '[\\/]setup-matt-pocock-skills[\\/]SKILL\.md$' } |
-    Sort-Object FullName -Descending |
-    Select-Object -First 1
-if (-not $skillFile) { throw 'The setup-matt-pocock-skills skill file is missing from the installed plugin.' }
-Write-Host "setup skill: $($skillFile.FullName)"
+$skillPath = Join-Path $env:USERPROFILE ".codex\plugins\cache\mattpocock\mattpocock-skills\$($plugin[0].version)\skills\engineering\setup-matt-pocock-skills\SKILL.md"
+if (-not (Test-Path -LiteralPath $skillPath)) {
+    throw "The setup-matt-pocock-skills file for installed plugin version $($plugin[0].version) is missing."
+}
+Write-Host "setup skill: $skillPath"
 
 if ($CheckSkillInvocation) {
     $prompt = @'
@@ -120,10 +153,8 @@ This is a read-only diagnostic. Attempt to load the installed $setup-matt-pocock
 
 $frontendOwner = Get-PortOwner -Port $frontendPort
 if ($frontendOwner) {
-    $commandLine = [string]$frontendOwner.CommandLine
-    if ($commandLine -notmatch 'vite' -or $commandLine -notmatch [regex]::Escape($frontend)) {
-        throw "Port $frontendPort belongs to an unrelated process (PID $($frontendOwner.ProcessId)); refusing to stop it."
-    }
+    Assert-WorkshopOwner -Process $frontendOwner -ExpectedDirectory $frontend -ExpectedCommand 'vite' -Port $frontendPort
+    $frontendWasRunning = $true
     Write-Host "Stopping workshop frontend PID $($frontendOwner.ProcessId) for a clean install."
     Stop-Process -Id $frontendOwner.ProcessId -Force
     $stoppedFrontend = $true
@@ -138,13 +169,30 @@ try {
     Invoke-Checked -FilePath $npm -Arguments @('audit') -WorkingDirectory $frontend
 } finally {
     if ($stoppedFrontend) {
-        Start-Process -FilePath $npm -ArgumentList @('run', 'dev', '--', '--host', '127.0.0.1', '--port', "$frontendPort", '--strictPort') `
-            -WorkingDirectory $frontend -WindowStyle Hidden -Environment @{ Path = $env:Path } | Out-Null
+        Start-WorkshopProcess -FilePath $npm -Arguments @('run', 'dev', '--', '--host', '127.0.0.1', '--port', "$frontendPort", '--strictPort') -WorkingDirectory $frontend
         Wait-WorkshopHttp -Url "http://127.0.0.1:$frontendPort/"
     }
 }
 
 if (-not $SkipRuntimeChecks) {
+    $backendOwner = Get-PortOwner -Port $backendPort
+    if ($backendOwner) {
+        Assert-WorkshopOwner -Process $backendOwner -ExpectedDirectory $backend -ExpectedCommand 'run\.py|uvicorn' -Port $backendPort
+    } else {
+        Write-Host 'Starting workshop backend.'
+        Start-WorkshopProcess -FilePath $uv -Arguments @('run', '--python', '3.13', 'python', 'run.py') -WorkingDirectory $backend
+    }
+
+    if (-not $frontendWasRunning) {
+        $frontendOwner = Get-PortOwner -Port $frontendPort
+        if ($frontendOwner) {
+            Assert-WorkshopOwner -Process $frontendOwner -ExpectedDirectory $frontend -ExpectedCommand 'vite' -Port $frontendPort
+        } else {
+            Write-Host 'Starting workshop frontend.'
+            Start-WorkshopProcess -FilePath $npm -Arguments @('run', 'dev', '--', '--host', '127.0.0.1', '--port', "$frontendPort", '--strictPort') -WorkingDirectory $frontend
+        }
+    }
+
     Wait-WorkshopHttp -Url "http://127.0.0.1:$backendPort/api/health"
     Wait-WorkshopHttp -Url "http://127.0.0.1:$frontendPort/"
 
@@ -154,7 +202,12 @@ if (-not $SkipRuntimeChecks) {
 
     $catalog = Invoke-RestMethod -Uri "$base/api/catalog/items" -TimeoutSec 15
     if (@($catalog.items).Count -lt 1) { throw 'The catalog is empty.' }
-    foreach ($product in @($catalog.items)) {
+    $products = @($catalog.items)
+    for ($page = 2; $page -le $catalog.total_pages; $page++) {
+        $nextPage = Invoke-RestMethod -Uri "$base/api/catalog/items?page=$page" -TimeoutSec 15
+        $products += @($nextPage.items)
+    }
+    foreach ($product in $products) {
         $image = Invoke-WebRequest -UseBasicParsing -Uri "$base$($product.picture_uri)" -TimeoutSec 15
         if ($image.StatusCode -ne 200 -or $image.Headers['Content-Type'] -notmatch '^image/') {
             throw "Product image check failed: $($product.picture_uri)"
@@ -164,7 +217,9 @@ if (-not $SkipRuntimeChecks) {
     $body = @{ email = 'demouser@perthai.com.au'; password = 'Pass@word1' } | ConvertTo-Json
     $auth = Invoke-RestMethod -Method Post -Uri "$base/api/auth/login" -ContentType 'application/json' -Body $body -TimeoutSec 15
     if (-not $auth.access_token) { throw 'Demo account login failed.' }
-    Write-Host 'Runtime API, proxy, catalog, image, and login checks: passed' -ForegroundColor Green
+    $favouritesPage = Invoke-WebRequest -UseBasicParsing -Uri "$base/favourites" -TimeoutSec 15
+    if ($favouritesPage.StatusCode -ne 200) { throw 'The browser-facing Favourites route failed.' }
+    Write-Host "Runtime API, proxy, $($products.Count) catalog images, login, and Favourites route: passed" -ForegroundColor Green
 }
 
 Write-Host 'Workshop verification passed.' -ForegroundColor Green
