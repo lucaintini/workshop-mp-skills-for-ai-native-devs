@@ -53,6 +53,13 @@ describe('FavouritesPage', () => {
     expect(screen.getByRole('link', { name: 'Browse the catalog' })).toHaveAttribute('href', '/');
   });
 
+  it('keeps the loading state visible while the collection request is pending', () => {
+    useAuth.mockReturnValue({ isAuthenticated: true });
+    api.getFavourites.mockReturnValue(new Promise(() => {}));
+    renderPage();
+    expect(screen.getByText('Loading favourites...')).toBeInTheDocument();
+  });
+
   it('shows load errors instead of disguising them as an empty collection', async () => {
     useAuth.mockReturnValue({ isAuthenticated: true });
     api.getFavourites.mockRejectedValue(new Error('Could not load favourites'));
