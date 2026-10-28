@@ -76,4 +76,42 @@ describe('ProductCard favourites', () => {
     await waitFor(() => expect(heart).toHaveAttribute('aria-pressed', 'false'));
     expect(screen.getByRole('alert')).toHaveTextContent('Could not save favourite');
   });
+
+  it('saves a Favourite and notifies the catalog after a successful add', async () => {
+    useAuth.mockReturnValue({ isAuthenticated: true, refreshBasket: vi.fn() });
+    api.addFavourite.mockResolvedValue(item);
+    const onFavouriteChange = vi.fn();
+
+    render(
+      <MemoryRouter>
+        <ProductCard item={item} onFavouriteChange={onFavouriteChange} />
+      </MemoryRouter>,
+    );
+
+    const heart = screen.getByRole('button', { name: `Add ${item.name} to favourites` });
+    fireEvent.click(heart);
+
+    await waitFor(() => expect(api.addFavourite).toHaveBeenCalledWith(item.id));
+    expect(heart).toHaveAttribute('aria-pressed', 'true');
+    expect(onFavouriteChange).toHaveBeenCalledWith(item.id, true);
+  });
+
+  it('removes a Favourite and notifies the catalog after a successful remove', async () => {
+    useAuth.mockReturnValue({ isAuthenticated: true, refreshBasket: vi.fn() });
+    api.removeFavourite.mockResolvedValue(null);
+    const onFavouriteChange = vi.fn();
+
+    render(
+      <MemoryRouter>
+        <ProductCard item={item} initialFavourite onFavouriteChange={onFavouriteChange} />
+      </MemoryRouter>,
+    );
+
+    const heart = screen.getByRole('button', { name: `Remove ${item.name} from favourites` });
+    fireEvent.click(heart);
+
+    await waitFor(() => expect(api.removeFavourite).toHaveBeenCalledWith(item.id));
+    expect(heart).toHaveAttribute('aria-pressed', 'false');
+    expect(onFavouriteChange).toHaveBeenCalledWith(item.id, false);
+  });
 });
