@@ -48,9 +48,11 @@ On Windows, run the complete workshop guardrail from the repository root:
 pwsh -File .\scripts\Verify-Workshop.ps1
 ```
 
-It discovers WinGet and workshop-local tools even when the current shell's PATH is stale, verifies the Matt Pocock plugin and setup-skill installation, runs every backend and frontend quality gate, and checks the running shop through its API and frontend proxy. If the workshop Vite server owns port 4321, the script restarts it around the clean install; it refuses to stop unrelated processes.
+It discovers WinGet and workshop-local tools even when the current shell's PATH is stale, verifies the Matt Pocock plugin and setup-skill installation, runs every backend and frontend quality gate, audits both Python dependency manifests plus npm, and checks the running shop through its API and frontend proxy. Runtime checks include database readiness, browser anti-framing headers, every catalog page and product image, login, and the Favourites route. If the workshop Vite server owns port 4321, the script restores it even after a failed gate; it refuses to stop unrelated processes.
 
 Use `-CheckSkillInvocation` to launch a fresh read-only Codex process and prove that `$setup-matt-pocock-skills` is actually callable, rather than merely installed. This stricter diagnostic fails when Codex's plugin loader does not expose the skill.
+
+GitHub Actions repeats the same tests on Windows and Ubuntu for pushes, pull requests, manual runs, and a weekly drift check. Dependabot proposes weekly npm, uv, and Actions updates. Updates remain pull requests: review and green gates are required rather than blind auto-merge or self-modifying production.
 
 ## What's here for the review step
 

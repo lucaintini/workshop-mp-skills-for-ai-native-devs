@@ -6,9 +6,11 @@ This workshop shop is not represented as production-ready. This document separat
 
 - Every API response carries a UUID request ID, preserving a valid caller-provided ID for cross-system correlation.
 - API requests produce structured JSON events containing method, route, status, duration, and request ID without credentials or tokens.
-- API responses set `nosniff`, clickjacking, referrer, and browser-permission headers.
+- Unhandled failures return a generic correlated response while retaining exception diagnostics in server logs.
+- Browser and API responses set anti-sniffing, anti-framing, referrer, and browser-permission headers. Sensitive/authenticated responses use `no-store`; public product images have an explicit cache policy.
+- JWTs validate issuer, audience, and expiry. Production rejects the tutorial secret or a signing secret shorter than 32 bytes, and unknown-account login performs equivalent password-hash work.
 - A frontend test uses axe-core rules tagged for WCAG A and AA to catch automatically detectable catalog-card regressions.
-- CI performs locked installation, backend and frontend tests, a production build, and dependency audit.
+- CI performs locked installation, backend and frontend tests, a production build, npm audit, and audits both retained Python dependency manifests. The vulnerable `python-jose`/`ecdsa` stack was replaced with PyJWT/cryptography.
 - Windows verification exercises proxy health, all catalog pages and images, login, and the browser-facing Favourites route.
 - Separate liveness and database-backed readiness endpoints let a supervisor restart a dead process and keep an unhealthy instance out of service.
 - The verifier starts missing workshop services and waits for readiness before exercising them; its stop/start/restore paths are covered by deterministic helper tests.
@@ -21,7 +23,7 @@ Automated accessibility checks are a guardrail, not a conformance claim. WCAG co
 ### 1. Production identity and secrets
 
 - Move signing keys and environment-specific configuration into a managed secret store.
-- Add key rotation, token revocation/expiry policy, login throttling, and security-event audit records.
+- Add key rotation, token revocation policy, login throttling, MFA/managed identity, and security-event audit records.
 - Select and trace a proportional OWASP ASVS 5.0 Level 1/2 requirement set. ASVS is the current stable framework for designing and verifying modern web application controls: [OWASP ASVS 5.0](https://asvs.owasp.org/).
 
 ### 2. Durable data operations

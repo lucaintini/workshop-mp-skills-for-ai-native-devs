@@ -11,7 +11,8 @@ A small online store used for the Perth AI "Matt Pocock skills" workshop. The bu
 
 - Backend: `cd python-eshop/backend && uv sync && uv run python run.py` (port 8765)
 - Frontend: `cd python-eshop/frontend && npm install && npm run dev` (port 4321)
-- Tests: `cd python-eshop/backend && uv run pytest`
+- Complete local gate: `pwsh -File .\scripts\Verify-Workshop.ps1`
+- Backend tests/audit: `cd python-eshop/backend && uv run pytest && uv run pip-audit && uv run pip-audit -r requirements.txt`
 
 ## Conventions
 
@@ -20,6 +21,9 @@ A small online store used for the Perth AI "Matt Pocock skills" workshop. The bu
 - Anonymous baskets are keyed by a UUID, signed-in baskets by email. Never let one address the other.
 - Store times as timezone-aware UTC.
 - Show evidence: run the tests and paste the output before saying something works.
+- Keep liveness (`/api/health`) distinct from database-backed readiness (`/api/health/ready`).
+- Never claim horizontal scaling while SQLite is authoritative local state; shared managed storage and stateless instances come first.
+- Dependency automation may open PRs, but it must not bypass review, tests, canary health, or rollback policy.
 
 ## Non-goals
 

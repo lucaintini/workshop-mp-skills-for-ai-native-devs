@@ -45,12 +45,14 @@ flowchart TB
     end
 
     subgraph Api[FastAPI process :8765]
-        Context[Request correlation and security middleware]
+        Context[Correlation, exception logging,<br/>security and cache policy]
+        Health[Liveness and database readiness]
         Routers[HTTP routers]
         Services[Domain services]
         DbClient[Database client]
         Static[Product images]
         Context --> Routers --> Services --> DbClient
+        Context --> Health --> DbClient
     end
 
     Database[(SQLite database)]
@@ -60,6 +62,8 @@ flowchart TB
     React -->|image requests| Proxy --> Static
     DbClient -->|parameterised SQL| Database
 ```
+
+The browser document and API independently emit anti-framing and browser-hardening headers. Authenticated and sensitive responses use `no-store`; public product images have an explicit cache policy. JWTs are bound to the expected issuer and audience, and production refuses the tutorial signing secret.
 
 ## 3. Low-level Favourites architecture
 
@@ -101,7 +105,7 @@ flowchart LR
 
 The unique Shopper/product relationship makes saves idempotent. The authenticated Shopper identity scopes every read and write. Failed optimistic changes roll back in the UI and remain visible as errors.
 
-## 4. Runtime and hardware topology
+## 4. Local runtime and hardware topology
 
 ```mermaid
 flowchart TB
@@ -137,7 +141,62 @@ flowchart TB
 
 All application traffic stays on the local Windows PC. GitHub stores source history and runs clean-room CI; it does not host the local shop.
 
-## 5. Favourite data flow
+## 5. Delivery, update, and recovery control flow
+
+```mermaid
+flowchart LR
+    Change[Developer or Dependabot PR]
+    Review[Human review]
+    CI{Required CI gates}
+    Backend[Windows backend tests<br/>lifecycle tests<br/>two Python audits]
+    Frontend[Ubuntu frontend tests<br/>axe checks<br/>build and npm audit]
+    Artifact[Immutable deployment artifact]
+    Canary[Canary instance]
+    Ready{Readiness and health objectives}
+    Promote[Promote release]
+    Rollback[Roll back previous artifact]
+    Supervisor[Supervisor with bounded restart backoff]
+
+    Change --> Review --> CI
+    CI --> Backend
+    CI --> Frontend
+    Backend --> Artifact
+    Frontend --> Artifact
+    Artifact --> Canary --> Ready
+    Ready -- healthy --> Promote --> Supervisor
+    Ready -- unhealthy --> Rollback
+    Supervisor -- dead process --> Supervisor
+    Supervisor -- repeated failure --> Rollback
+```
+
+Scheduled CI runs weekly to expose runner and dependency drift. Dependabot opens reviewable npm, uv, and GitHub Actions pull requests; it never bypasses tests or silently mutates production. The current repository demonstrates the gates but does not ship a production orchestrator or deployment pipeline.
+
+## 6. Availability and scaling boundary
+
+```mermaid
+flowchart TB
+    LoadBalancer[Health-aware load balancer]
+    Api1[Stateless API replica]
+    Api2[Stateless API replica]
+    SharedDb[(Managed shared relational database)]
+    Secrets[Managed secrets and key rotation]
+    Telemetry[Central traces, metrics, and logs]
+    Backup[Encrypted backups and restore drills]
+
+    LoadBalancer -->|only ready instances| Api1
+    LoadBalancer -->|only ready instances| Api2
+    Api1 --> SharedDb
+    Api2 --> SharedDb
+    Secrets --> Api1
+    Secrets --> Api2
+    Api1 --> Telemetry
+    Api2 --> Telemetry
+    SharedDb --> Backup
+```
+
+This is the required production target, not the current local topology. SQLite is intentionally a single-instance workshop boundary. Starting multiple API copies against separate local files would create divergent shopper state, so horizontal scaling must wait for shared managed storage, migrations, backup/restore evidence, and stateless instances.
+
+## 7. Favourite and security data flow
 
 ```mermaid
 sequenceDiagram
@@ -154,20 +213,51 @@ sequenceDiagram
     Card->>Card: update heart optimistically
     Card->>API: save or remove product
     API->>Context: request with JWT and optional request ID
-    Context->>Auth: validated or generated request ID
+    Context->>Context: validate/generate request ID and apply cache policy
+    Context->>Auth: decode signed token; verify issuer, audience, and expiry
     Auth-->>Router: authenticated Shopper email
     Router->>Service: apply Favourite command
     Service->>DB: account-scoped idempotent write
     DB-->>Service: committed result
     Service-->>Router: complete catalog-card data
     Router-->>Context: JSON response
-    Context-->>API: response with request ID and security headers
+    Context-->>API: response with request ID, security and cache headers
     API-->>Card: confirm state
 
     alt request fails
+        Context->>Context: log exception diagnostics with request ID
         API-->>Card: error
         Card->>Card: roll back heart and show error
     end
 ```
 
 Every boundary is exercised through the FastAPI HTTP seam in backend tests and through component/router behaviour in frontend tests.
+
+## 8. Health and restart sequence
+
+```mermaid
+sequenceDiagram
+    participant Supervisor
+    participant API as FastAPI process
+    participant Ready as /api/health/ready
+    participant DB as Database
+    participant Router as Traffic router
+
+    Supervisor->>API: start process
+    Supervisor->>Ready: probe
+    Ready->>DB: SELECT 1
+    alt database responds
+        DB-->>Ready: available
+        Ready-->>Supervisor: 200 ready
+        Supervisor->>Router: admit instance
+    else database unavailable
+        Ready-->>Supervisor: 503 unavailable
+        Supervisor->>Router: keep instance out of service
+        Supervisor->>Supervisor: retry with bounded backoff / alert
+    end
+    alt process exits
+        Supervisor->>API: restart within policy
+    end
+```
+
+`/api/health` is a liveness signal; `/api/health/ready` additionally probes the database. Restarting a live but dependency-unready process forever is not recovery: production policy should remove it from traffic, retain diagnostics, use bounded retries, and roll back or escalate when the objective gate remains unhealthy.

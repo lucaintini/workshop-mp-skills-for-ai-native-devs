@@ -4,7 +4,7 @@ A Vibe-coded Python rewrite of the eShopOnWeb storefront. Uses a clean architect
 
 **Router → Service → Database Client → SQLite**
 
-The React frontend talks to a FastAPI backend over JSON. Scope matches the original storefront: catalog, basket, auth, checkout, and orders — no admin, no payment gateway, no product detail page.
+The React frontend talks to a FastAPI backend over JSON. Scope includes catalog, favourites, basket, auth, checkout, and orders — no admin, no payment gateway, no product detail page.
 
 ## Architecture
 
@@ -52,9 +52,13 @@ uv run python run.py
 ```bash
 cd python-eshop/backend
 uv run pytest
+uv run pip-audit
+uv run pip-audit -r requirements.txt
 ```
 
 The suite boots the API in-process against a throwaway SQLite database, so it never touches your `eshop.db`, needs no running server and makes no network calls.
+
+`/api/health` reports process liveness. `/api/health/ready` returns success only while the database responds and is the correct endpoint for traffic admission. SQLite keeps the workshop simple but intentionally limits the app to a single authoritative instance; see [`../docs/architecture.md`](../docs/architecture.md) before attempting horizontal scale.
 
 > **Note:** Do not use bare `uvicorn main:app --reload` — that defaults to port 8000, which may already be in use. Always use `uv run python run.py`.
 
@@ -81,8 +85,9 @@ The Vite dev server proxies `/api` and `/static` to the backend.
 1. Browse the catalog — filter by brand/type, paginate (10 items per page)
 2. Add items to basket — works anonymously via `X-Basket-Id` stored in `localStorage`
 3. Login or register — anonymous basket merges into your account
-4. Checkout — review order, click **Pay now** (uses a hardcoded shipping address like the original)
-5. View orders — **My Orders** in the header
+4. Save products as account-private Favourites and return to them later
+5. Checkout — review order, click **Pay now** (uses a hardcoded shipping address like the original)
+6. View orders — **My Orders** in the header
 
 ## API overview
 
@@ -91,6 +96,8 @@ The Vite dev server proxies `/api` and `/static` to the backend.
 | GET | `/api/catalog/items` | Public |
 | GET | `/api/catalog/brands` | Public |
 | GET | `/api/catalog/types` | Public |
+| GET | `/api/health` | Public liveness |
+| GET | `/api/health/ready` | Public readiness |
 | GET | `/api/basket` | JWT or `X-Basket-Id` |
 | POST | `/api/basket/items` | JWT or `X-Basket-Id` |
 | PUT | `/api/basket/items` | JWT or `X-Basket-Id` |
@@ -99,3 +106,6 @@ The Vite dev server proxies `/api` and `/static` to the backend.
 | POST | `/api/orders` | JWT required |
 | GET | `/api/orders` | JWT required |
 | GET | `/api/orders/{id}` | JWT required |
+| GET | `/api/favourites` | JWT required |
+| POST | `/api/favourites/{catalog_item_id}` | JWT required |
+| DELETE | `/api/favourites/{catalog_item_id}` | JWT required |
